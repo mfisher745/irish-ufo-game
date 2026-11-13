@@ -21,6 +21,7 @@ interface GameWindow {
     state(): { screenId: string | null; player: { x: number; y: number; health: number; buzz: number }; currentSection: string | null; completed: string[]; mykoCallsLeft: number; missingDialogue: string[] } | null;
     walkChapter(): void;
     startSection(id: string): void;
+    completeCurrent(): string | null;
   };
   __phaserGame: { scene: { getScene(k: string): { cameras: { main: { scrollX: number; scrollY: number; zoom: number } } } } };
   __qa?: { completed: string[]; missing: string[]; sections: string[] };
@@ -31,13 +32,17 @@ interface Run {
   screenId: string;
   grid: { widthTiles: number; heightTiles: number; blocked: boolean[] };
   dialogue: { blocking: boolean };
-  player: { pos: Vec; inventory: { slots(): ({ drinkId: string; count: number } | null)[]; empties: number }; buzz: { value: number } };
+  player: { pos: Vec; health: { current: number; max: number }; inventory: { slots(): ({ drinkId: string; count: number } | null)[]; empties: number }; buzz: { value: number } };
   pushPuzzlesHere(): { puzzle: { piecePositions(): { id: string; col: number; row: number }[]; layout: { fixed: { col: number; row: number }[] }; isComplete(): boolean } }[];
   callsRemaining(): number;
   setPlayerPosition(p: Vec): void;
   goToScreen(id: string, spawn: Vec): void;
   screenLayout: { exits: { id: string; area: { x: number; y: number; width: number; height: number } }[] };
   examinablesHere(): { id: string; position: Vec }[];
+  dressing: { interactPoints(screen: string, examinables: unknown): { examinableId: string; position: Vec; kind: string }[] };
+  module: { examinables: unknown };
+  enemies(): { pos: Vec; down: boolean; health: number }[];
+  give(item: object): void;
 }
 
 const TILE = 16;
@@ -212,7 +217,10 @@ test('(a) the pub: bar, Dympna, the pint, the fruit machine, out the back door',
   await dismissScenes(page);
 
   // E beside Dympna.
-  const dympna = await page.evaluate(() => (window as unknown as GameWindow).__game.session.run?.examinablesHere().find((e) => e.id === 'c1.dympna')?.position);
+  const dympna = await page.evaluate(() => {
+    const r = (window as unknown as GameWindow).__game.session.run as Run;
+    return r.dressing.interactPoints(r.screenId, r.module.examinables).find((e) => e.examinableId === 'c1.dympna')?.position;
+  });
   expect(dympna).toBeTruthy();
   const dy = dympna as Vec;
   await walkTo(page, { x: dy.x, y: dy.y + TILE }, { tolerance: 3 });
@@ -234,7 +242,7 @@ test('(a) the pub: bar, Dympna, the pint, the fruit machine, out the back door',
   await walkTo(page, { x: 2 * TILE + 8, y: 7 * TILE + 8 });
   await until(page, 'machine intro', async () => (await flag(page, 'machine.intro')) === true);
   await dismissScenes(page);
-  await aimAt(page, machineWorld);
+  await aimAt(page, machineWorld); // the haymaker has to touch the machine, so aim at it
   for (let i = 0; i < 12 && ((await flag(page, 'pub.step')) as number) < 5; i++) {
     // Three clicks inside the combo window, then give the combo time to lapse and look again.
     for (let n = 0; n < 3 && ((await flag(page, 'pub.step')) as number) < 5; n++) {
