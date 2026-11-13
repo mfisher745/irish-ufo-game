@@ -42,9 +42,9 @@ export const C02: DialogueFile = {
     'c2.clue.docket.title': 'Delivery docket',
     'c2.clue.docket.body': 'From the Meridian depot. “Soil harmoniser, 40 units.” Signed for by nobody. The Brennans don’t harmonise anything.',
     'c2.clue.docket.margin': 'What’s a soil harmoniser? No, don’t. You don’t know either.',
-    'c2.conclusion.title': 'Conclusion',
-    'c2.conclusion.body': 'The fragment, the van and the docket all go back to one place: the Meridian depot on the Carrick road. That’s where this came from. Going tonight.',
-    'c2.conclusion.margin': 'It’s odd. I’ll say odd. I’m not saying aliens.',
+    'c2.clue.conclusion.title': 'Conclusion',
+    'c2.clue.conclusion.body': 'The fragment, the van and the docket all go back to one place: the Meridian depot on the Carrick road. That’s where this came from. Going tonight.',
+    'c2.clue.conclusion.margin': 'It’s odd. I’ll say odd. I’m not saying aliens.',
 
     'c2.call.fight.casebook': 'Two of the Brennan cousins at the yard. Sorted. Myko helped a bit.',
     'c2.call.fight.margin': 'A bit. I never took my hands out of my pockets.',

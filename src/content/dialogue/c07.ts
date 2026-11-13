@@ -66,12 +66,12 @@ export const C07: DialogueFile = {
     'c7.clue.route.title': 'Delivery log',
     'c7.clue.route.body': 'Van log. Roswell to Nevada every Thursday, full. Nevada to Roswell every Friday, empty. Six hundred miles each way.',
     'c7.clue.route.margin': 'Full of what? Snow globes? Going INTO the desert?',
-    'c7.lead.nevada.title': 'Lead: Nevada',
-    'c7.lead.nevada.body': 'Gary is paid from there. The van drives there every Thursday. The permit is for its service gate. Meridian Basin Facility, Nevada. Gate C. That’s where they live.',
-    'c7.lead.nevada.margin': 'You’re going to be right, aren’t you. I can feel it coming.',
+    'c7.deduction.nevada.lead.title': 'Lead: Nevada',
+    'c7.deduction.nevada.lead.body': 'Gary is paid from there. The van drives there every Thursday. The permit is for its service gate. Meridian Basin Facility, Nevada. Gate C. That’s where they live.',
+    'c7.deduction.nevada.lead.margin': 'You’re going to be right, aren’t you. I can feel it coming.',
 
-    'c7.deduction.prompt': 'Where do they come from?',
-    'c7.deduction.answer': 'Meridian Basin Facility, Gate C',
+    'c7.deduction.nevada.prompt': 'Where do they come from?',
+    'c7.deduction.nevada.answer': 'Meridian Basin Facility, Gate C',
 
     'c7.call.fight.casebook': 'Three mascots and three clerks in the yard behind the gift shop. All aliens. Dealt with. Myko was present.',
     'c7.call.fight.margin': 'Present. I like that. I was present all over them.',

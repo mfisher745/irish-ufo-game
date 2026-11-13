@@ -35,12 +35,12 @@ export const C03: DialogueFile = {
     'c3.clue.manifest.title': 'Shipping manifest',
     'c3.clue.manifest.body': 'Forty containers a year, Kilnamoe to Pier Nine Freight, Boston. Contents: “agricultural”. Container numbers all start MAS.',
     'c3.clue.manifest.margin': 'Forty containers of nothing. That’s a lot of nothing to post.',
-    'c3.lead.boston.title': 'Lead: Boston',
-    'c3.lead.boston.body': 'The fragment is MAS-4471-K. The containers are MAS. They go to Pier Nine Freight, Boston. Whatever landed in the bog was shipped out of here in a box.',
-    'c3.lead.boston.margin': 'String. It’s just string. But it’s good string.',
+    'c3.deduction.boston.lead.title': 'Lead: Boston',
+    'c3.deduction.boston.lead.body': 'The fragment is MAS-4471-K. The containers are MAS. They go to Pier Nine Freight, Boston. Whatever landed in the bog was shipped out of here in a box.',
+    'c3.deduction.boston.lead.margin': 'String. It’s just string. But it’s good string.',
 
-    'c3.deduction.prompt': 'Where did it go?',
-    'c3.deduction.answer': 'Pier Nine Freight, Boston',
+    'c3.deduction.boston.prompt': 'Where did it go?',
+    'c3.deduction.boston.answer': 'Pier Nine Freight, Boston',
 
     'c3.call.fight.casebook': 'Night shift at the depot got physical. Held them off. Myko came in at the end.',
     'c3.call.fight.margin': 'At the end, the middle, and the start.',

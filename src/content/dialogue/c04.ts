@@ -43,12 +43,12 @@ export const C04: DialogueFile = {
     'c4.clue.foam.title': 'Packing foam',
     'c4.clue.foam.body': 'Foam insert left in the container. Cut to hold something round. About the size of a dinner plate.',
     'c4.clue.foam.margin': 'Or a dinner plate.',
-    'c4.lead.dc.title': 'Lead: Washington',
-    'c4.lead.dc.body': 'Meridian ships it. Pier Nine holds it. Every second Tuesday a federal office collects it: the Office of Atmospheric Records. That’s who has it now.',
-    'c4.lead.dc.margin': 'You’re going to walk into a government building. In that anorak.',
+    'c4.deduction.dc.lead.title': 'Lead: Washington',
+    'c4.deduction.dc.lead.body': 'Meridian ships it. Pier Nine holds it. Every second Tuesday a federal office collects it: the Office of Atmospheric Records. That’s who has it now.',
+    'c4.deduction.dc.lead.margin': 'You’re going to walk into a government building. In that anorak.',
 
-    'c4.deduction.prompt': 'Who took it?',
-    'c4.deduction.answer': 'The Office of Atmospheric Records',
+    'c4.deduction.dc.prompt': 'Who took it?',
+    'c4.deduction.dc.answer': 'The Office of Atmospheric Records',
 
     'c4.call.fight.casebook': 'Disagreement in a Boston bar. Six of them. Came out of it fine. Myko stepped in briefly.',
     'c4.call.fight.margin': 'I didn’t put my drink down.',

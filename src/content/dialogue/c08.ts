@@ -50,12 +50,12 @@ export const C08: DialogueFile = {
     'c8.clue.shift.title': 'Clipboard',
     'c8.clue.shift.body': 'Dropped at the fence. Gate C shift change is at midnight. For ten minutes there is one man on.',
     'c8.clue.shift.margin': 'One man. I’d say we know him.',
-    'c8.lead.gate.title': 'Plan: Gate C at midnight',
-    'c8.lead.gate.body': 'Trucks are off refuelling at 03:00 and 15:00, not midnight, but the gate has one guard for ten minutes at the shift change, and I’ve a permit for it. Gate C. Midnight.',
-    'c8.lead.gate.margin': 'That’s an actual plan. Who are you?',
+    'c8.deduction.gate.lead.title': 'Plan: Gate C at midnight',
+    'c8.deduction.gate.lead.body': 'Trucks are off refuelling at 03:00 and 15:00, not midnight, but the gate has one guard for ten minutes at the shift change, and I’ve a permit for it. Gate C. Midnight.',
+    'c8.deduction.gate.lead.margin': 'That’s an actual plan. Who are you?',
 
-    'c8.deduction.prompt': 'How do we get in?',
-    'c8.deduction.answer': 'Gate C at the shift change',
+    'c8.deduction.gate.prompt': 'How do we get in?',
+    'c8.deduction.gate.answer': 'Gate C at the shift change',
 
     'c8.call.fight.casebook': 'Four agents and a truck at the fence. Got through. Myko came up from the road.',
     'c8.call.fight.margin': 'I came up from the road and then they all lay down.',

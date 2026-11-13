@@ -58,12 +58,12 @@ export const C09: DialogueFile = {
     'c9.proof.footage.title': 'Security tape',
     'c9.proof.footage.body': 'Hangar camera, taken from the wall recorder in bay 3. Ninety seconds. Shows the craft, the crew, and one of them dropping a clipboard.',
     'c9.proof.footage.margin': 'That’s the one they’ll remember. The clipboard.',
-    'c9.lead.uplink.title': 'Plan: the control room',
-    'c9.lead.uplink.body': 'The contract says communications go out from the control level. The directory puts the Administrator’s office there. Pruitt’s lanyard opens the lift. Five proofs, one uplink, every screen on Earth.',
-    'c9.lead.uplink.margin': 'Every screen. Go on, so. I’ll hold the bag.',
+    'c9.deduction.uplink.lead.title': 'Plan: the control room',
+    'c9.deduction.uplink.lead.body': 'The contract says communications go out from the control level. The directory puts the Administrator’s office there. Pruitt’s lanyard opens the lift. Five proofs, one uplink, every screen on Earth.',
+    'c9.deduction.uplink.lead.margin': 'Every screen. Go on, so. I’ll hold the bag.',
 
-    'c9.deduction.prompt': 'Where do we send it from?',
-    'c9.deduction.answer': 'The control room uplink',
+    'c9.deduction.uplink.prompt': 'Where do we send it from?',
+    'c9.deduction.uplink.answer': 'The control room uplink',
 
     'c9.call.fight.casebook': 'Alien security in the labs, with shields. Eight in total. Got past. Myko was involved.',
     'c9.call.fight.margin': 'I was involved the way weather is involved.',

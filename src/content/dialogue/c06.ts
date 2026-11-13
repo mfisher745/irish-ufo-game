@@ -55,12 +55,12 @@ export const C06: DialogueFile = {
     'c6.clue.coffee.title': 'The coffee',
     'c6.clue.coffee.body': 'Diner refills the cup without being asked. No charge. Cause unknown. Monitoring.',
     'c6.clue.coffee.margin': 'It’s called being decent. Write that down.',
-    'c6.lead.roswell.title': 'Lead: Roswell',
-    'c6.lead.roswell.body': 'The motel was paid for by a gift shop. The receipt is from the same gift shop. And the crop formation is the gift shop’s logo. Little Green Gifts, Roswell.',
-    'c6.lead.roswell.margin': 'We have to leave, then. Do we. Right.',
+    'c6.deduction.roswell.lead.title': 'Lead: Roswell',
+    'c6.deduction.roswell.lead.body': 'The motel was paid for by a gift shop. The receipt is from the same gift shop. And the crop formation is the gift shop’s logo. Little Green Gifts, Roswell.',
+    'c6.deduction.roswell.lead.margin': 'We have to leave, then. Do we. Right.',
 
-    'c6.deduction.prompt': 'Who is paying for this?',
-    'c6.deduction.answer': 'Little Green Gifts, Roswell',
+    'c6.deduction.roswell.prompt': 'Who is paying for this?',
+    'c6.deduction.roswell.answer': 'Little Green Gifts, Roswell',
 
     'c6.call.fight.casebook': 'Surveillance drones over Field 9, six of them, and two agents. Brought them down. Myko assisted.',
     'c6.call.fight.margin': 'I had an ice bucket. That’s all I’ll say.',
