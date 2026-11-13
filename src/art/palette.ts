@@ -7,6 +7,8 @@
  * canvas 2D drawing.
  */
 
+import type { RegionId } from '../core/types';
+
 export const PALETTE = {
   // Neutrals (shared by every region)
   ink: 0x14121a,
@@ -73,8 +75,6 @@ export const PALETTE = {
 
 export type ColourName = keyof typeof PALETTE;
 
-/** Art regions. Boston and DC share one; Nevada outdoors and the base do not. */
-export type ArtRegion = 'kilnamoe' | 'cities' | 'ohio' | 'roswell' | 'nevada' | 'base';
 
 /** Colours every region may use: neutrals, characters and the alarm red. */
 export const SHARED_COLOURS = [
@@ -108,7 +108,7 @@ export const REGION_COLOURS = {
   roswell: ['lime', 'magenta', 'tan', 'limeShade', 'magentaShade', 'tanShade', 'alienGrey'],
   nevada: ['sand', 'rust', 'rustDark', 'tan', 'tanShade', 'skyPale'],
   base: ['teal', 'violet', 'tealDark', 'violetDark', 'alienGrey', 'fluoro'],
-} as const satisfies Record<ArtRegion, readonly ColourName[]>;
+} as const satisfies Record<RegionId, readonly ColourName[]>;
 
 /** '#rrggbb' for canvas 2D contexts. */
 export function css(name: ColourName): string {

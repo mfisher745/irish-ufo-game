@@ -4,7 +4,7 @@ Region: `nevada`. Afternoon into night. Introduces Poitín Breath, heat and sens
 
 ## Heat
 
-- A heat meter appears under the Buzz meter in daylight. It rises in the sun, faster when running, and falls in shade.
+- A heat meter appears under the Buzz meter in daylight. It rises in the sun, faster when moving at full speed than when sneaking or standing, and falls in shade.
 - Water resets it. At full heat Andrew loses health slowly and his aim sways as if Locked.
 - Alcohol does not help. Myko says so every time the player tries.
 - After sunset (beat 6 onward) the meter goes away.
@@ -22,11 +22,11 @@ Region: `nevada`. Afternoon into night. Introduces Poitín Breath, heat and sens
 1. **The gas station** (`c8.explore.road`). Stock up: water (three bottles, the only ones for a while), bourbon, crisps. The attendant has seen everything and has no curiosity left. Key clue: `c8.clue.schedule` (a patrol truck fuel log with times). Colour clue: Pruitt's car, with a retirement brochure for a lake house on the seat.
 2. **Poitín Breath.** A wall of tumbleweed and fence wire blocks the wash that leads to the perimeter. Myko produces a bottle of poitín he has carried from Kilnamoe for emergencies, and a lighter. F breathes a short cone of fire for 40 Buzz. It clears the tumbleweed. Myko asks for the bottle back.
 3. **Checkpoint, then the perimeter by day** (`c8.stealth.perimeter`, stealth). Three hazards:
-   - Ground sensors detect running. Sneaking or walking is safe.
+   - Ground sensors detect normal movement. Sneaking (Shift) is safe. There is no separate walk; WASD is the run.
    - Thermal masts detect Andrew when his heat meter is above half. Stay in shade and drink water.
    - Two patrol trucks drive the track with headlight cones. Rock outcrops block them.
    Clean-run reward: a cooler with two waters and a tequila.
-4. **Junction puzzle** (`c8.puzzle.junctions`, puzzle). Three junction boxes each toggle two of five sensor lines. Find the combination that turns off the three lines between Andrew and the fence. A diagram on each box shows which lines it toggles. Solvable in four toggles.
+4. **Junction puzzle** (`c8.puzzle.junctions`, puzzle). Three junction boxes each toggle two of five sensor lines. Find the combination that turns off the three lines between Andrew and the fence. Each line is a row of real ground sensors in the world, and turning a line off disables them. A diagram on each box shows which lines it toggles. Solvable in four toggles.
 5. **The fence** (`c8.fight.fence`, fight). The sun goes down as Andrew reaches it. Four `agent`s and one patrol truck that parks and adds its headlights (inside the cone, agents' darts are faster). Poitín Breath clears a group. Key clue from a dropped clipboard: `c8.clue.shift` (shift change at Gate C, ten minutes with one man on).
 6. **Deduction board** (`c8.deduction.gate`, deduction). Link `c8.clue.schedule`, `c8.clue.shift` and `c7.clue.permit` to name the plan: Gate C at the shift change.
 7. **Checkpoint, then Agent Pruitt, round two** (`c8.boss.pruitt2`, boss).
