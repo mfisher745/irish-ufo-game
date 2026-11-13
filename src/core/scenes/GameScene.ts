@@ -12,6 +12,7 @@ export class GameScene extends Phaser.Scene {
   private run: ChapterRun | null = null;
   private view: WorldView | null = null;
   private input_: PhaserInput | null = null;
+  private suppressPresses = false;
 
   constructor(
     private readonly session: GameSession,
@@ -33,7 +34,15 @@ export class GameScene extends Phaser.Scene {
     for (const key of this.hudKeys) {
       if (this.scene.get(key)) this.scene.launch(key);
     }
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanup());
+    const onResume = (): void => {
+      this.suppressPresses = true;
+      this.input_?.tracker.releaseAll();
+    };
+    this.events.on(Phaser.Scenes.Events.RESUME, onResume);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.events.off(Phaser.Scenes.Events.RESUME, onResume);
+      this.cleanup();
+    });
   }
 
   override update(_time: number, delta: number): void {
@@ -41,13 +50,12 @@ export class GameScene extends Phaser.Scene {
     const input = this.input_;
     if (!run || !input || run.isEnded) return;
     const dt = Math.min(delta, MAX_STEP_MS);
-    const frame = input.frame(dt);
-    if (frame.pressed.has('pause')) {
-      this.session.pause();
-      return;
-    }
-    if (frame.pressed.has('casebook') && this.scene.get('Casebook')) this.scene.launch('Casebook');
+    let frame = input.frame(dt);
+    // Esc, Tab and advancing scene dialogue belong to the UI. The click or E
+    // that closes a scene, a board or the pause menu must not also punch.
+    if (this.suppressPresses) frame = { ...frame, pressed: new Set(), released: new Set() };
     run.tick(dt, frame);
+    this.suppressPresses = run.sceneBlocking || run.activeDeduction() !== null;
     if (this.run === run && !run.isEnded) this.view?.sync();
   }
 

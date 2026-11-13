@@ -14,7 +14,7 @@ export class PhaserInput {
   constructor(private readonly scene: Phaser.Scene) {
     const kb = scene.input.keyboard;
     if (kb) {
-      kb.addCapture([Phaser.Input.Keyboard.KeyCodes.TAB, Phaser.Input.Keyboard.KeyCodes.SPACE]);
+      kb.addCapture([Phaser.Input.Keyboard.KeyCodes.SPACE]);
       const down = (e: KeyboardEvent): void => this.tracker.keyDown(e.code);
       const up = (e: KeyboardEvent): void => this.tracker.keyUp(e.code);
       kb.on('keydown', down);

@@ -1171,7 +1171,7 @@ export interface HangoverTuning {
 /** Player movement, noise and carrying. DESIGN.md sections 7.1, 7.2 and 7.3. */
 export interface PlayerTuning {
   readonly maxHealth: number;
-  readonly walkSpeed: number;
+  /** WASD moves at this speed; Shift sneaks. There is no separate walk. */
   readonly runSpeed: number;
   readonly sneakSpeedMultiplier: number;
   readonly footstepNoiseRadius: number;

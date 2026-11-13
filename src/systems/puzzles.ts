@@ -53,6 +53,8 @@ export class PushPuzzle extends PuzzleBase {
   private holdMs = 0;
   private holdDir: Cardinal | null = null;
   pushes = 0;
+  /** Called after each successful push (sound). */
+  onPush: (() => void) | null = null;
 
   constructor(
     def: PuzzleDef,
@@ -105,6 +107,7 @@ export class PushPuzzle extends PuzzleBase {
     piece.row = nr;
     piece.slideMs = PENDING_TUNING.world.pushSlideMs;
     this.pushes++;
+    this.onPush?.();
     if (this.goalMet()) this.solved();
     return true;
   }

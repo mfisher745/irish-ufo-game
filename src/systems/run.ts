@@ -111,6 +111,9 @@ export interface LivePickup {
   item: PickupItem;
 }
 
+/** Effects the run triggers directly, because they have no bus event. */
+export type RunEffect = 'door' | 'push' | 'deflect';
+
 export interface RunOptions {
   readonly module: ChapterModule;
   readonly save: SaveState;
@@ -126,6 +129,8 @@ export interface RunOptions {
   readonly writeSave: (state: SaveState, reason: SaveReason) => void;
   readonly onDeath: () => void;
   readonly onChapterComplete: (endState: BuzzState, snapshot: SaveState) => void;
+  /** Sound effects with no bus event (door, push, deflect). */
+  readonly playEffect?: (id: RunEffect) => void;
 }
 
 interface SectionEntry {
@@ -389,7 +394,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     }
     if (this.dialogue.blocking) return;
 
-    const live = this.controlsLocked || this.myko.callInProgress ? lockedInput(input) : input;
+    const live = this.controlsLocked || this.myko.callInProgress || this.deduction?.isOpen === true ? lockedInput(input) : input;
     const p = this.player;
 
     // Player conditions.
@@ -448,7 +453,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     const combat = this.anyCombatOrStealthActive();
     this.myko.standPoint = combat ? this.activeEntrance() : this.myko.standPoint;
     const inputActive = live.move.x !== 0 || live.move.y !== 0 || live.pressed.size > 0;
-    this.myko.update(dtMs, input, { combatOrStealth: combat, inputActive });
+    this.myko.update(dtMs, this.deduction?.isOpen === true ? lockedInput(input) : input, { combatOrStealth: combat, inputActive });
 
     if (p.dead && this.deathTimer < 0) {
       this.deathTimer = PENDING_TUNING.player.deathRespawnDelayMs;
@@ -811,6 +816,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       if (!grid) continue;
       const puzzle = new PushPuzzle(m.def.puzzle.id === p.sectionId ? m.def.puzzle : { id: p.sectionId, chapter: this.chapter, kind: 'push' }, p.layout, grid, this, this.bus, this.sectionReward(p.sectionId));
       if (this.completed.has(p.sectionId)) puzzle.restoreComplete();
+      puzzle.onPush = () => this.opts.playEffect?.('push');
       this.sections.set(p.sectionId, { completable: puzzle, kind: 'puzzle', screenId: p.screenId, entrance: null, start: () => puzzle.start() });
     }
     const board = m.def.deductionBoard;
@@ -1131,6 +1137,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       const reach = TUNING.abilities.hurley.shape.kind === 'arc' ? TUNING.abilities.hurley.shape.range : 0;
       if (distance(proj.pos, p.pos) <= reach + PENDING_TUNING.combat.projectileRadius) {
         deflect(proj, p.aimDeg, { kind: 'player', abilityId: 'hurley' });
+        this.opts.playEffect?.('deflect');
       }
     }
   }
@@ -1160,6 +1167,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       } else if (checkHits && proj.owner === 'enemy' && this.playerTargetable() && projectileTouches(proj, p.pos, r)) {
         if (proj.shape.deflectable && this.clock <= this.deflectUntil) {
           deflect(proj, p.aimDeg, { kind: 'player', abilityId: 'hurley' });
+          this.opts.playEffect?.('deflect');
         } else if (!proj.hit.has(p.instanceId)) {
           proj.hit.add(p.instanceId);
           this.hitPlayer(
@@ -1292,6 +1300,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       if (!rectContains(ex.area, pos)) continue;
       if (this.exitLocks.get(ex.id) === true) continue;
       if (ex.lockedUntil?.some((s) => !this.completed.has(s)) && this.exitLocks.get(ex.id) !== false) continue;
+      this.opts.playEffect?.('door');
       this.loadScreen(ex.toScreen, ex.spawn);
       return;
     }
@@ -1321,7 +1330,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
 }
 
 function lockedInput(input: InputFrame): InputFrame {
-  const keep = new Set(['callMyko', 'pause', 'casebook'] as const);
+  const keep = new Set(['callMyko'] as const);
   const filter = (s: ReadonlySet<import('../core/types').InputAction>) =>
     new Set([...s].filter((a) => (keep as ReadonlySet<string>).has(a)));
   return { ...input, move: { x: 0, y: 0 }, held: filter(input.held), pressed: filter(input.pressed), released: filter(input.released) };

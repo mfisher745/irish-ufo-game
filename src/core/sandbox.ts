@@ -98,13 +98,13 @@ export function createSandboxModule(chapter: ChapterNumber = 1): ChapterModule {
         {
           id: 'sandbox.objective',
           textId: 'ui.prompt.move',
-          hint: { objectiveId: 'sandbox.objective', nudgeDialogueId: 'myko.idle.01', answerDialogueId: 'myko.idle.02' },
+          hint: { objectiveId: 'sandbox.objective', nudgeDialogueId: 'c1.hint.bar.1', answerDialogueId: 'c1.hint.bar.2' },
         },
       ],
       newAbilities: [],
       mykoCallLines: {
-        fight: { sequenceId: `${p}.myko.call.fight`, casebookBodyTextId: `${p}.myko.call.fight.body`, casebookMarginTextId: `${p}.myko.call.fight.margin` },
-        puzzle: { sequenceId: `${p}.myko.call.puzzle`, casebookBodyTextId: `${p}.myko.call.puzzle.body`, casebookMarginTextId: `${p}.myko.call.puzzle.margin` },
+        fight: { sequenceId: `${p}.call.fight`, casebookBodyTextId: `${p}.call.fight.casebook`, casebookMarginTextId: `${p}.call.fight.margin` },
+        puzzle: { sequenceId: `${p}.call.puzzle`, casebookBodyTextId: `${p}.call.puzzle.casebook`, casebookMarginTextId: `${p}.call.puzzle.margin` },
       },
       finaleSectionId: 'c1.boss.bigtom',
     },

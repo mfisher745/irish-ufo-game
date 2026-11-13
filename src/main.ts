@@ -1,22 +1,22 @@
 import Phaser from 'phaser';
+import { createAudio } from './audio';
 import { installDebugHooks, parseDebugEntry } from './core/debug';
 import { BootScene } from './core/scenes/BootScene';
 import { GameScene } from './core/scenes/GameScene';
-import { DevHudScene, PlaceholderTitleScene } from './core/scenes/placeholderScenes';
+import { GameEvents } from './core/types';
 import { session, uiState } from './systems';
+import { UiSceneKeys, createUiScenes } from './ui';
 
 // ---------------------------------------------------------------------------
-// INTEGRATION POINT (UI, audio, chapters). When src/ui, src/audio and
-// src/chapters merge:
-//   import './chapters';                          // registers every ChapterModule
-//   import { createUiScenes } from './ui';
-//   import { createAudio } from './audio';
-//   const uiScenes = createUiScenes(uiState);     // Title, Hud, Pause, Casebook, Deduction, Settings
-//   createAudio(session.bus, () => session.audioSettings());
-// and replace `uiScenes` below; HUD_SCENES becomes ['Hud'].
+// INTEGRATION POINT. UI and audio are wired here. Chapters register
+// themselves when `src/chapters/index.ts` exists: add `import './chapters';`.
 // ---------------------------------------------------------------------------
-const uiScenes: Phaser.Scene[] = [new PlaceholderTitleScene(uiState), new DevHudScene(uiState)];
-const HUD_SCENES: readonly string[] = ['DevHud'];
+const audio = createAudio(session.bus, () => session.audioSettings());
+session.bus.on(GameEvents.ScreenEntered, ({ region }) => audio.setRegion(region));
+session.playEffect = (id) => audio.play(id);
+const uiScenes = createUiScenes(uiState, { play: (id) => audio.play(id) });
+const HUD_SCENES: readonly string[] = [UiSceneKeys.Hud];
+const OVERLAYS: readonly string[] = [UiSceneKeys.Pause, UiSceneKeys.Casebook, UiSceneKeys.Deduction, UiSceneKeys.Settings];
 
 const WIDTH = 480;
 const HEIGHT = 270;
@@ -43,34 +43,39 @@ const game = new Phaser.Game({
   scene: [new BootScene(session, entry), new GameScene(session, HUD_SCENES), ...uiScenes],
 });
 
-const OVERLAYS = ['Pause', 'Casebook', 'Deduction', 'Settings'];
+const stopIfRunning = (key: string): void => {
+  if (game.scene.getScene(key) && (game.scene.isActive(key) || game.scene.isPaused(key) || game.scene.isSleeping(key))) game.scene.stop(key);
+};
 
 session.setDriver({
   showTitle: () => {
-    for (const key of ['Game', ...HUD_SCENES, ...OVERLAYS]) if (game.scene.isActive(key) || game.scene.isPaused(key)) game.scene.stop(key);
-    game.scene.start('Title');
+    for (const key of ['Game', ...HUD_SCENES, ...OVERLAYS]) stopIfRunning(key);
+    game.scene.start(UiSceneKeys.Title);
   },
   startGame: () => {
-    if (game.scene.isActive('Title')) game.scene.stop('Title');
-    for (const key of HUD_SCENES) if (game.scene.isActive(key)) game.scene.stop(key);
-    if (game.scene.isActive('Game') || game.scene.isPaused('Game')) game.scene.stop('Game');
+    stopIfRunning(UiSceneKeys.Title);
+    for (const key of [...HUD_SCENES, ...OVERLAYS]) stopIfRunning(key);
+    stopIfRunning('Game');
     game.scene.start('Game');
   },
-  pauseGame: () => {
-    game.scene.pause('Game');
-    if (game.scene.getScene('Pause')) game.scene.run('Pause');
-  },
-  resumeGame: () => {
-    if (game.scene.getScene('Pause')) game.scene.stop('Pause');
-    game.scene.resume('Game');
-  },
+  // The UI opens and closes its own pause and casebook overlays.
+  pauseGame: () => game.scene.pause('Game'),
+  resumeGame: () => game.scene.resume('Game'),
 });
 
 installDebugHooks(session);
+(globalThis as { __phaserGame?: Phaser.Game }).__phaserGame = game;
 
-window.addEventListener('resize', () => {
-  game.scale.setZoom(fitZoom());
-});
+// Keep the whole-number zoom on window resize and on Phaser's fullscreen and resize events.
+const refit = (): void => {
+  const z = fitZoom();
+  if (game.scale.zoom !== z) game.scale.setZoom(z);
+};
+window.addEventListener('resize', refit);
+game.scale.on(Phaser.Scale.Events.ENTER_FULLSCREEN, refit);
+game.scale.on(Phaser.Scale.Events.LEAVE_FULLSCREEN, refit);
+game.scale.on(Phaser.Scale.Events.RESIZE, refit);
+document.addEventListener('fullscreenchange', refit);
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {

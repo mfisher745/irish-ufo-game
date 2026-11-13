@@ -51,6 +51,7 @@ import { hangoverAtChapterStart, hangoverFromChapterEnd, maxHealthFor } from './
 import type { DialogueLookup } from './dialogue';
 import { freshPlayerSnapshot } from './player';
 import { ChapterRun } from './run';
+import type { RunEffect } from './run';
 
 /** What the session asks of Phaser. Implemented in `src/main.ts`. */
 export interface SceneDriver {
@@ -187,6 +188,8 @@ export class GameSession {
   private current: ChapterRun | null = null;
   private paused = false;
   private audio: AudioSettings;
+  /** Sound for effects with no bus event; set by main from the audio module. */
+  playEffect: ((id: RunEffect) => void) | null = null;
 
   constructor(private readonly opts: SessionOptions = {}) {
     this.bus = opts.bus ?? new EventBus();
@@ -269,6 +272,7 @@ export class GameSession {
       writeSave: (state: SaveState) => p.store.write(state),
       onDeath: () => this.onDeath(),
       onChapterComplete: (endState, snap) => this.onChapterComplete(endState, snap),
+      playEffect: (id) => this.playEffect?.(id),
     });
     this.current = run;
     this.bus.emit(GameEvents.ChapterStarted, { chapter: p.module.def.number });
