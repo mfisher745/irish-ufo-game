@@ -1,7 +1,8 @@
 /**
  * Shared contracts for every system, chapter, UI and test.
  *
- * Implements DESIGN.md section 10, "Rules that keep parallel work compatible".
+ * Implements DESIGN.md section 10, "Rules that keep parallel work compatible",
+ * and the section, ID and roster conventions in `docs/chapters/README.md`.
  * Only systems-dev changes this file, and only with the creative director's
  * approval.
  *
@@ -35,53 +36,98 @@ export type Facing = 'up' | 'down' | 'left' | 'right';
 /** Chapter numbers 1 to 10. DESIGN.md section 5. */
 export type ChapterNumber = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 
+/** ID prefix for a chapter, e.g. `c3`. docs/chapters/README.md. */
+export type ChapterPrefix = `c${ChapterNumber}`;
+
 /**
  * Key into `src/content/dialogue/`. Every player-visible string is looked up by
- * one of these. DESIGN.md section 10 ("No text shown to the player is written
- * anywhere except src/content/dialogue/").
+ * one of these. DESIGN.md section 10.
  */
 export type TextId = string;
 
 /** Identifier of a dialogue line or sequence. DESIGN.md section 10. */
 export type DialogueId = string;
 
-/** Identifier of a clue. DESIGN.md section 7.4. */
-export type ClueId = string;
-
-/** Identifier of one of the pieces of proof shown in the final broadcast. DESIGN.md section 7.4. */
-export type ProofId = string;
-
-/** Identifier of an enemy definition. DESIGN.md section 7.2. */
-export type EnemyId = string;
-
-/** Identifier of a fight, boss, set piece, puzzle, deduction board or stealth section. DESIGN.md sections 5, 7.3, 7.4, 7.5. */
-export type EncounterId = string;
+/** Screen ID, e.g. `c1.pub`. docs/chapters/README.md and each chapter's Screens table. */
+export type ScreenId = `${ChapterPrefix}.${string}`;
 
 /** Identifier of a checkpoint. DESIGN.md section 7.2. */
-export type CheckpointId = string;
+export type CheckpointId = `${ChapterPrefix}.${string}`;
 
 /** Identifier of an objective that Myko can hint about. DESIGN.md section 7.5. */
 export type ObjectiveId = string;
-
-/** Identifier of a screen within a chapter. DESIGN.md section 5 ("two or three connected screens"). */
-export type ScreenId = string;
 
 /** Identifier of a pickup placed in a level. DESIGN.md section 7.1. */
 export type PickupId = string;
 
 /**
- * Region, used for palette and music selection. DESIGN.md sections 8 and 9.
- * Section 8 groups Boston/DC and Nevada/base for palette; they are listed
- * separately here so music and palette can still share one id per screen.
+ * Region, used for both palette and music. This is the single definition;
+ * `src/art/palette.ts` imports it. DESIGN.md sections 8 and 9.
  */
-export type RegionId =
-  | 'kilnamoe'
-  | 'boston'
-  | 'washington'
-  | 'ohio'
-  | 'roswell'
-  | 'nevada'
-  | 'base';
+export type RegionId = 'kilnamoe' | 'cities' | 'ohio' | 'roswell' | 'nevada' | 'base';
+
+/** Regions in chapter order. DESIGN.md section 8. */
+export const REGIONS = ['kilnamoe', 'cities', 'ohio', 'roswell', 'nevada', 'base'] as const satisfies readonly RegionId[];
+
+// ---------------------------------------------------------------------------
+// Sections (docs/chapters/README.md, DESIGN.md sections 5, 7.3, 7.4, 7.5)
+// ---------------------------------------------------------------------------
+
+/** Section kinds from docs/chapters/README.md. */
+export type SectionKind = 'fight' | 'boss' | 'setpiece' | 'puzzle' | 'deduction' | 'stealth' | 'explore';
+
+/** Section kinds that implement `completeNow()`. docs/chapters/README.md. */
+export type CompletableKind = 'fight' | 'boss' | 'setpiece' | 'puzzle' | 'deduction';
+
+/** Completable kinds in README order. docs/chapters/README.md. */
+export const COMPLETABLE_KINDS = ['fight', 'boss', 'setpiece', 'puzzle', 'deduction'] as const satisfies readonly CompletableKind[];
+
+/** Section ID of a given kind, e.g. `c1.fight.chipper`. docs/chapters/README.md. */
+export type SectionIdOf<K extends SectionKind> = `${ChapterPrefix}.${K}.${string}`;
+
+export type FightSectionId = SectionIdOf<'fight'>;
+export type PuzzleSectionId = SectionIdOf<'puzzle'>;
+export type DeductionSectionId = SectionIdOf<'deduction'>;
+export type StealthSectionId = SectionIdOf<'stealth'>;
+export type ExploreSectionId = SectionIdOf<'explore'>;
+
+/**
+ * The fight a stealth section becomes when Andrew is caught: the stealth ID
+ * plus `.alarm`, kind `fight`. docs/chapters/README.md.
+ */
+export type AlarmFightId = `${StealthSectionId}.alarm`;
+
+/**
+ * Every boss and set piece. Each has its own definition rather than an
+ * `EnemyId`. docs/chapters/01 to 10, "Boss" sections.
+ */
+export type BossId =
+  | 'c1.boss.bigtom'
+  | 'c2.setpiece.ram'
+  | 'c3.boss.halloran'
+  | 'c4.boss.foreman'
+  | 'c5.boss.pruitt1'
+  | 'c6.setpiece.combine'
+  | 'c7.boss.mascots'
+  | 'c8.boss.pruitt2'
+  | 'c9.setpiece.lockdown'
+  | 'c10.boss.administrator';
+
+/** The one section Myko cannot finish. DESIGN.md section 7.5, docs/chapters/10-disclosure.md. */
+export const NON_CALLABLE_BOSS = 'c10.boss.administrator' as const satisfies BossId;
+
+/** Any section ID. docs/chapters/README.md. */
+export type SectionId =
+  | FightSectionId
+  | AlarmFightId
+  | BossId
+  | PuzzleSectionId
+  | DeductionSectionId
+  | StealthSectionId
+  | ExploreSectionId;
+
+/** IDs of sections that implement `completeNow()`. docs/chapters/README.md. */
+export type CompletableSectionId = FightSectionId | AlarmFightId | BossId | PuzzleSectionId | DeductionSectionId;
 
 // ---------------------------------------------------------------------------
 // Input (DESIGN.md section 6)
@@ -186,7 +232,7 @@ export interface BuzzStateEffects {
   /** 0 = full knockback, 1 = immune. */
   readonly knockbackResistance: number;
   readonly specialsUnlocked: boolean;
-  /** Aim sway amplitude in degrees. */
+  /** Aim sway amplitude in degrees. Also used at full heat ("sways as if Locked"). */
   readonly aimSwayDeg: number;
   /** Movement drift strength, 0 = none. */
   readonly movementDrift: number;
@@ -206,7 +252,7 @@ export interface BuzzSnapshot {
   readonly banjaxedPhaseMsLeft: number;
 }
 
-/** Hangover carried into a chapter. DESIGN.md section 7.1. */
+/** Hangover carried into a chapter. DESIGN.md section 7.1, docs/chapters/README.md "Carry-over rules". */
 export interface HangoverState {
   readonly active: boolean;
 }
@@ -218,15 +264,35 @@ export type TimedEffectKind = 'speedBoost' | 'extraSway' | 'steadyAim';
 export interface ActiveTimedEffect {
   readonly kind: TimedEffectKind;
   readonly msLeft: number;
-  /** Strength; meaning depends on kind (a multiplier for speedBoost and extraSway, unused for steadyAim). */
+  /** Strength; a multiplier for speedBoost and extraSway, unused for steadyAim. */
   readonly magnitude: number;
+}
+
+// ---------------------------------------------------------------------------
+// Heat (docs/chapters/08-the-long-road.md)
+// ---------------------------------------------------------------------------
+
+/**
+ * Heat meter (chapter 8, daylight only). Rises in sun, faster when running,
+ * falls in shade, reset by water. At full heat Andrew loses health slowly and
+ * sways as if Locked. Thermal masts see him above a threshold.
+ * docs/chapters/08-the-long-road.md "Heat".
+ */
+export interface HeatSnapshot {
+  /** False after sunset, when the meter goes away. */
+  readonly active: boolean;
+  /** 0..max, max set in tuning. */
+  readonly value: number;
 }
 
 // ---------------------------------------------------------------------------
 // Drinks and food (DESIGN.md section 7.1)
 // ---------------------------------------------------------------------------
 
-/** Every drink in the game. DESIGN.md section 7.1. */
+/**
+ * Everything carried in a drink slot and used with Q. Water is a drink here
+ * (Buzz 0, resets heat). DESIGN.md section 7.1.
+ */
 export type DrinkId =
   | 'stout'
   | 'whiskey'
@@ -234,16 +300,11 @@ export type DrinkId =
   | 'lightBeer'
   | 'bourbon'
   | 'craftIpa'
-  | 'tequila';
-
-/** Every food (and non-alcoholic consumable). DESIGN.md section 7.1. */
-export type FoodId =
-  | 'crisps'
-  | 'chickenFilletRoll'
-  | 'breakfastRoll'
-  | 'spiceBag'
-  | 'tea'
+  | 'tequila'
   | 'water';
+
+/** Food, consumed on pickup or interaction and never carried. DESIGN.md section 7.1. */
+export type FoodId = 'crisps' | 'chickenFilletRoll' | 'breakfastRoll' | 'spiceBag' | 'tea';
 
 /**
  * One effect of consuming a drink or food. Magnitudes come from tuning.
@@ -269,7 +330,10 @@ export interface DrinkDef {
   readonly emptiesLeft: number;
 }
 
-/** A food. Defined in `src/content/tuning.ts`. DESIGN.md section 7.1. */
+/**
+ * A food. Defined in `src/content/tuning.ts`. A food pickup that would do
+ * nothing (full health, no hangover) stays where it is. DESIGN.md section 7.1.
+ */
 export interface FoodDef {
   readonly id: FoodId;
   readonly nameTextId: TextId;
@@ -277,22 +341,36 @@ export interface FoodDef {
   readonly effects: readonly ConsumableEffect[];
 }
 
-/** One drink slot in Andrew's inventory, selected with 1/2/3 or the wheel. DESIGN.md section 6. */
+/** One filled drink slot: one drink type with a count. DESIGN.md sections 6 and 7.1. */
 export interface DrinkSlot {
   readonly drinkId: DrinkId;
+  /** 1..tuning.player.drinkSlotCap. */
   readonly count: number;
 }
 
-/** Something Andrew can pick up. DESIGN.md sections 7.1 and 7.3 (clean-run reward). */
+/**
+ * Andrew's three fixed drink slots, selected with 1/2/3 or the wheel. A new
+ * drink type with no free slot stays on the ground. DESIGN.md sections 6 and 7.1.
+ */
+export type DrinkSlots = readonly [DrinkSlot | null, DrinkSlot | null, DrinkSlot | null];
+
+/** Index into `DrinkSlots`. DESIGN.md section 6. */
+export type DrinkSlotIndex = 0 | 1 | 2;
+
+/** Something Andrew can pick up or be given. DESIGN.md section 7.1. */
 export type PickupItem =
-  | { readonly kind: 'drink'; readonly drinkId: DrinkId }
+  | { readonly kind: 'drink'; readonly drinkId: DrinkId; readonly count: number }
   | { readonly kind: 'food'; readonly foodId: FoodId }
   | { readonly kind: 'empties'; readonly count: number };
+
+/** Why a pickup stayed on the ground. DESIGN.md section 7.1. */
+export type PickupRefusal = 'noFreeSlot' | 'slotFull' | 'emptiesFull' | 'noEffect';
 
 /** A pickup placed in a level. DESIGN.md section 7.1. */
 export interface PickupDef {
   readonly id: PickupId;
   readonly item: PickupItem;
+  readonly screenId: ScreenId;
   readonly position: Vec2;
   /** Optional Myko comment on pickup (e.g. one per craft IPA). DESIGN.md sections 7.1 and 7.5. */
   readonly commentDialogueId?: DialogueId;
@@ -337,12 +415,17 @@ export type AttackShape =
   | { readonly kind: 'arc'; readonly range: number; readonly arcDeg: number }
   | { readonly kind: 'circle'; readonly radius: number }
   | { readonly kind: 'cone'; readonly range: number; readonly angleDeg: number }
+  | { readonly kind: 'charge'; readonly distance: number; readonly width: number }
   | {
       readonly kind: 'projectile';
       readonly speed: number;
       readonly range: number;
       /** Number of enemies it passes through; 0 stops at the first. */
       readonly pierce: number;
+      /** Thrown in an arc over obstacles rather than straight. */
+      readonly lobbed: boolean;
+      /** Can be knocked back by a timed hurley swing. */
+      readonly deflectable: boolean;
       /** Noise radius where it lands, 0 for silent. Bottle Throw distracts guards. */
       readonly impactNoiseRadius: number;
     };
@@ -363,7 +446,7 @@ export interface AbilityDef {
   /** Base damage per hit before Buzz multipliers. */
   readonly damage: number;
   readonly knockback: number;
-  /** Combo hit count and per-hit tuning (punch: three hits, the third a haymaker). */
+  /** Per-hit tuning for a melee combo (punch: three hits, the third a haymaker). */
   readonly combo?: readonly ComboHitDef[];
   /** Hold time for a charged use (Sliotar Strike). */
   readonly chargeMs?: number;
@@ -392,11 +475,27 @@ export interface Health {
   readonly max: number;
 }
 
-/** Who dealt a hit. DESIGN.md section 7.2 and 7.5. */
+/** Enemy roster IDs. docs/chapters/README.md "Enemy roster". */
+export type EnemyId =
+  | 'lad'
+  | 'cousin'
+  | 'suit'
+  | 'worker'
+  | 'brawler'
+  | 'docker'
+  | 'agent'
+  | 'drone'
+  | 'mascot'
+  | 'clerk'
+  | 'security';
+
+/** Who dealt a hit. DESIGN.md sections 7.2 and 7.5. */
 export type DamageSource =
   | { readonly kind: 'player'; readonly abilityId: AbilityId }
   | { readonly kind: 'enemy'; readonly enemyId: EnemyId; readonly attackId: string }
+  | { readonly kind: 'boss'; readonly bossId: BossId; readonly attackId: string }
   | { readonly kind: 'myko' }
+  /** Environmental damage, including full heat. */
   | { readonly kind: 'hazard'; readonly hazardId: string };
 
 /** A resolved hit. DESIGN.md section 7.2. */
@@ -407,16 +506,18 @@ export interface HitInfo {
   readonly amount: number;
   readonly knockback: Vec2;
   readonly stunMs: number;
+  /** Hold the target in place (the brawler's grab), 0 for none. */
+  readonly holdMs: number;
 }
 
 /** Status conditions an enemy can be in. DESIGN.md sections 7.2 and 7.3. */
-export type EnemyStatus = 'normal' | 'telegraphing' | 'attacking' | 'stunned' | 'knockedBack' | 'down';
+export type EnemyStatus = 'normal' | 'telegraphing' | 'attacking' | 'recovering' | 'stunned' | 'knockedBack' | 'down';
 
 /** Enemy groups from the story. DESIGN.md section 4. */
 export type EnemyFaction = 'local' | 'federal' | 'alien' | 'machine' | 'animal';
 
-/** One enemy attack. Every attack is telegraphed. DESIGN.md section 7.2. */
-export interface EnemyAttackDef {
+/** One attack. Every attack is telegraphed. DESIGN.md section 7.2. */
+export interface AttackDef {
   readonly id: string;
   readonly shape: AttackShape;
   readonly damage: number;
@@ -424,9 +525,15 @@ export interface EnemyAttackDef {
   /** Visible warning before the hit lands. Must be > 0. */
   readonly telegraphMs: number;
   readonly cooldownMs: number;
+  /** Recovery after the attack, during which the attacker is open. */
+  readonly recoveryMs: number;
+  /** Shots fired per use (the clerk's three-shot burst), default 1. */
+  readonly burst?: number;
+  /** Holds Andrew in place unless he Stumbles (the brawler's grab). */
+  readonly holdMs?: number;
 }
 
-/** An enemy. Defined in `src/content/tuning.ts`. DESIGN.md sections 5, 7.2, 7.3. */
+/** A roster enemy. Defined in `src/content/tuning.ts`. docs/chapters/README.md, DESIGN.md section 7.2. */
 export interface EnemyDef {
   readonly id: EnemyId;
   readonly faction: EnemyFaction;
@@ -436,16 +543,65 @@ export interface EnemyDef {
   readonly maxHealth: number;
   readonly moveSpeed: number;
   readonly knockbackResistance: number;
-  readonly attacks: readonly EnemyAttackDef[];
+  readonly flies: boolean;
+  readonly attacks: readonly AttackDef[];
   /** Present for enemies that can act as stealth guards. */
   readonly senses?: GuardSensesDef;
-  readonly isBoss: boolean;
-  /** Appears as a person until revealed (chapter 7). */
-  readonly disguised?: boolean;
+  /** Frontal shield arc in degrees (security); 0 or absent for none. */
+  readonly frontalShieldDeg?: number;
+  /** Looks like a tourist until it first attacks (mascot). */
+  readonly disguisedUntilAttack?: boolean;
+}
+
+/** What starts a boss phase. docs/chapters, "Boss" sections. */
+export type BossPhaseTrigger =
+  | { readonly kind: 'start' }
+  | { readonly kind: 'healthBelow'; readonly fraction: number }
+  | { readonly kind: 'targetsLeft'; readonly count: number }
+  | { readonly kind: 'elapsedMs'; readonly ms: number };
+
+/** How a boss or set piece ends. docs/chapters, "Boss" sections. */
+export type BossEndCondition =
+  | { readonly kind: 'healthBelow'; readonly fraction: number }
+  | { readonly kind: 'targetsDestroyed'; readonly count: number }
+  | { readonly kind: 'reachExit' }
+  | { readonly kind: 'scripted' };
+
+/** One boss phase. docs/chapters, "Boss" sections. */
+export interface BossPhaseDef {
+  readonly id: string;
+  readonly trigger: BossPhaseTrigger;
+  readonly attacks: readonly AttackDef[];
+  readonly attackSpeedMultiplier: number;
+}
+
+/** A boss or set piece. Defined in `src/content/tuning.ts` under its section ID. docs/chapters, "Boss" sections. */
+export interface BossDef {
+  readonly id: BossId;
+  readonly kind: 'boss' | 'setpiece';
+  readonly nameTextId: TextId;
+  readonly spriteKey: string;
+  /** Absent for set pieces with no health bar. */
+  readonly maxHealth?: number;
+  readonly phases: readonly BossPhaseDef[];
+  readonly end: BossEndCondition;
+  /** Arena size in tiles. */
+  readonly arenaTiles: { readonly width: number; readonly height: number };
+}
+
+/** One wave of a fight. docs/chapters, "Beats". */
+export interface WaveDef {
+  readonly enemies: readonly { readonly enemyId: EnemyId; readonly count: number }[];
+}
+
+/** A fight's waves. Defined in `src/content/tuning.ts` under its section ID. docs/chapters/README.md. */
+export interface FightDef {
+  readonly id: FightSectionId | AlarmFightId;
+  readonly waves: readonly WaveDef[];
 }
 
 // ---------------------------------------------------------------------------
-// Stealth (DESIGN.md section 7.3)
+// Stealth (DESIGN.md section 7.3, docs/chapters/08-the-long-road.md)
 // ---------------------------------------------------------------------------
 
 /** A guard's vision cone and hearing. DESIGN.md section 7.3. */
@@ -460,7 +616,7 @@ export interface GuardSensesDef {
  * - patrol: following its route.
  * - investigating: heard a noise and is going to look.
  * - detecting: sees Andrew; the detection marker is filling.
- * - alarm: marker filled; the section is now a fight.
+ * - alarm: marker filled; the section is now its `.alarm` fight.
  */
 export type AlertState = 'patrol' | 'investigating' | 'detecting' | 'alarm';
 
@@ -475,14 +631,14 @@ export interface PatrolWaypoint {
   readonly facing?: Facing;
 }
 
-/** A guard's patrol route. DESIGN.md section 7.3. */
+/** A patrol route. DESIGN.md section 7.3. */
 export interface PatrolRoute {
   readonly mode: PatrolMode;
   readonly waypoints: readonly PatrolWaypoint[];
 }
 
-/** Sources of noise guards react to. DESIGN.md sections 7.1, 7.2, 7.3. */
-export type NoiseKind = 'footstep' | 'sneakFootstep' | 'bottle' | 'combat' | 'other';
+/** Sources of noise guards react to. DESIGN.md section 7.3, docs/chapters/06 (corn rustle). */
+export type NoiseKind = 'footstep' | 'sneakFootstep' | 'rustle' | 'bottle' | 'combat' | 'other';
 
 /** A noise emitted into the world. DESIGN.md section 7.3. */
 export interface NoiseEvent {
@@ -505,10 +661,10 @@ export interface GuardSnapshot {
   readonly investigateTarget?: Vec2;
 }
 
-/** Kinds of prop Andrew can Act Natural beside. DESIGN.md section 7.2. */
-export type HidingPropKind = 'queue' | 'noticeboard' | 'vendingMachine' | 'other';
+/** Places Andrew can Act Natural. DESIGN.md section 7.2, docs/chapters/05, 06, 09. */
+export type HidingPropKind = 'queue' | 'noticeboard' | 'vendingMachine' | 'waterCooler' | 'tallCorn';
 
-/** A prop that enables Act Natural. DESIGN.md section 7.2. */
+/** A prop or area that enables Act Natural. DESIGN.md section 7.2. */
 export interface HidingPropDef {
   readonly id: string;
   readonly kind: HidingPropKind;
@@ -516,57 +672,115 @@ export interface HidingPropDef {
   readonly radius: number;
 }
 
-/** A stealth sensor (chapter 8). DESIGN.md section 5. */
-export interface SensorDef {
-  readonly id: string;
-  readonly position: Vec2;
-  readonly senses: GuardSensesDef;
-  readonly route?: PatrolRoute;
+/** A vision cone. DESIGN.md section 7.3. */
+export interface ConeDef {
+  readonly range: number;
+  readonly angleDeg: number;
 }
+
+/**
+ * Non-guard stealth hazards. docs/chapters/04 (floodlights) and
+ * docs/chapters/08-the-long-road.md (ground sensors, thermal masts, patrol trucks).
+ * Only trucks move.
+ */
+export type StealthHazardDef =
+  | {
+      /** Detects running within its radius. Sneaking or walking is safe. */
+      readonly kind: 'groundSensor';
+      readonly id: string;
+      readonly position: Vec2;
+      readonly radius: number;
+    }
+  | {
+      /** Detects Andrew within range while his heat is above `tuning.heat.thermalDetectFraction`. */
+      readonly kind: 'thermalMast';
+      readonly id: string;
+      readonly position: Vec2;
+      readonly range: number;
+    }
+  | {
+      /** Drives a route with a headlight cone. Blocked by sight-blocking tiles. */
+      readonly kind: 'patrolTruck';
+      readonly id: string;
+      readonly route: PatrolRoute;
+      readonly speed: number;
+      readonly headlights: ConeDef;
+    }
+  | {
+      /** Fixed position, cone sweeps back and forth. */
+      readonly kind: 'floodlight';
+      readonly id: string;
+      readonly position: Vec2;
+      readonly cone: ConeDef;
+      readonly sweepFromDeg: number;
+      readonly sweepToDeg: number;
+      readonly sweepPeriodMs: number;
+    };
 
 /** A guard placed in a stealth section. DESIGN.md section 7.3. */
 export interface GuardPlacement {
   readonly enemyId: EnemyId;
   readonly route: PatrolRoute;
+  /** Seated guards (chapter 9 clerks) have short cones and look up on noise. */
+  readonly seated?: boolean;
 }
 
-/** A group of enemies spawned together. DESIGN.md sections 7.2 and 7.3 (reinforcements). */
-export interface SpawnGroup {
-  readonly enemies: readonly { readonly enemyId: EnemyId; readonly position: Vec2 }[];
-}
+/**
+ * Bonus for finishing a stealth section without the alarm: a drink, food or
+ * colour clue. Never a key clue and never proof. DESIGN.md section 7.3.
+ */
+export type CleanRunReward =
+  | { readonly kind: 'pickup'; readonly item: PickupItem }
+  | { readonly kind: 'clue'; readonly clueId: ClueId };
 
-/** A stealth section. A checkpoint sits before each one. DESIGN.md sections 7.2 and 7.3. */
+/**
+ * A stealth section. A checkpoint sits before each one. Being caught converts
+ * it to the fight `<id>.alarm`. DESIGN.md sections 7.2 and 7.3.
+ */
 export interface StealthSectionDef {
-  readonly id: EncounterId;
+  readonly id: StealthSectionId;
   readonly checkpointId: CheckpointId;
   readonly guards: readonly GuardPlacement[];
-  readonly sensors: readonly SensorDef[];
+  readonly hazards: readonly StealthHazardDef[];
   readonly hidingProps: readonly HidingPropDef[];
-  /** Spawned when the alarm sounds; the section then becomes this combat encounter. */
-  readonly onAlarm: {
-    readonly reinforcements: SpawnGroup;
-    readonly combatEncounterId: EncounterId;
-  };
-  /** Bonus for finishing without the alarm. Optional, never required. */
-  readonly cleanRunReward?: Reward;
-}
-
-/** Heat meter state (chapter 8). DESIGN.md sections 5 and 7.1. */
-export interface HeatSnapshot {
-  /** 0..max, max set in tuning. */
-  readonly value: number;
+  readonly cleanRunReward?: CleanRunReward;
 }
 
 // ---------------------------------------------------------------------------
 // Investigation, casebook, deduction, puzzles (DESIGN.md section 7.4)
 // ---------------------------------------------------------------------------
 
+/** Clue ID, e.g. `c2.clue.fragment`. docs/chapters/README.md. */
+export type ClueId = `${ChapterPrefix}.clue.${string}`;
+
+/** The five proofs shown in the broadcast. docs/chapters/09-level-minus-four.md "The five proofs". */
+export type ProofId = 'c9.proof.craft' | 'c9.proof.contract' | 'c9.proof.directory' | 'c9.proof.log' | 'c9.proof.footage';
+
+/** All five proofs. docs/chapters/09-level-minus-four.md. */
+export const PROOFS = [
+  'c9.proof.craft',
+  'c9.proof.contract',
+  'c9.proof.directory',
+  'c9.proof.log',
+  'c9.proof.footage',
+] as const satisfies readonly ProofId[];
+
+/** Anything that goes in the casebook as evidence and can be linked on a deduction board. docs/chapters/09 (proofs used on a board). */
+export type EvidenceId = ClueId | ProofId;
+
 /**
- * A clue. Text is in Andrew's words, with Myko's margin note.
+ * How a piece of evidence matters. Key clues are needed for a deduction board;
+ * colour clues are not; proofs are the broadcast items. docs/chapters/README.md.
+ */
+export type EvidenceKind = 'key' | 'colour' | 'proof';
+
+/**
+ * A clue or proof. Text is in Andrew's words, with Myko's margin note.
  * DESIGN.md section 7.4.
  */
 export interface Clue {
-  readonly id: ClueId;
+  readonly id: EvidenceId;
+  readonly kind: EvidenceKind;
   readonly chapter: ChapterNumber;
   /** Short name shown on the deduction board. */
   readonly titleTextId: TextId;
@@ -574,126 +788,129 @@ export interface Clue {
   readonly bodyTextId: TextId;
   /** Myko's note in the margin. */
   readonly marginTextId: TextId;
-  /** Set when this clue is also one of the pieces of proof for the broadcast. */
-  readonly proofId?: ProofId;
 }
 
-/** Something examinable with E. DESIGN.md section 7.4. */
+/** Something examinable or usable with E. DESIGN.md section 7.4. */
 export interface ExaminableDef {
   readonly id: string;
+  readonly screenId: ScreenId;
   readonly position: Vec2;
-  /** Clue added on examine, if any. */
-  readonly clueId?: ClueId;
+  /** Evidence added on examine, if any. */
+  readonly evidenceId?: EvidenceId;
+  /** Item given on interaction (the kiosk tea, the diner coffee). */
+  readonly item?: PickupItem;
   /** Line shown on examine. */
   readonly dialogueId?: DialogueId;
 }
 
 /** A casebook entry. DESIGN.md sections 7.4 and 7.5. */
 export type CasebookEntry =
-  | { readonly kind: 'clue'; readonly clueId: ClueId; readonly chapter: ChapterNumber }
+  | { readonly kind: 'evidence'; readonly evidenceId: EvidenceId; readonly chapter: ChapterNumber }
   | {
+      /** Written when a deduction board is solved. */
       readonly kind: 'lead';
-      readonly deductionBoardId: EncounterId;
+      readonly deductionId: DeductionSectionId;
       readonly chapter: ChapterNumber;
-      readonly bodyTextId: TextId;
-      readonly marginTextId?: TextId;
     }
   | {
-      /** Andrew's brief, inaccurate record of a Myko call, with Myko's correction. */
+      /** Andrew's brief, inaccurate record of a Myko call, with Myko's correction. One per call. */
       readonly kind: 'mykoCall';
-      readonly encounterId: EncounterId;
+      readonly sectionId: CompletableSectionId;
+      readonly callKind: MykoCallKind;
       readonly chapter: ChapterNumber;
-      readonly bodyTextId: TextId;
-      readonly marginTextId: TextId;
     };
 
 /**
- * A deduction board: link three clues to name the next lead. A wrong answer
+ * A deduction board: link three clues to name a fixed lead. A wrong answer
  * costs nothing except a remark from Myko. DESIGN.md section 7.4.
  */
 export interface DeductionBoardDef {
-  readonly id: EncounterId;
+  readonly id: DeductionSectionId;
   readonly chapter: ChapterNumber;
-  /** Clues offered on the board. */
-  readonly candidateClueIds: readonly ClueId[];
-  /** The three clues that must be linked. Order does not matter. */
-  readonly solution: readonly [ClueId, ClueId, ClueId];
-  /** The lead named when solved. */
+  /** Evidence offered on the board (the player's casebook, filtered). */
+  readonly candidateIds: readonly EvidenceId[];
+  /** The three items that must be linked. Order does not matter. */
+  readonly solution: readonly [EvidenceId, EvidenceId, EvidenceId];
+  /** The lead named when solved, and its casebook entry. */
   readonly leadTextId: TextId;
+  readonly leadMarginTextId: TextId;
   /** Myko's remarks on wrong answers, cycled. */
   readonly wrongAnswerDialogueIds: readonly DialogueId[];
 }
 
-/** The physical puzzle kinds named in DESIGN.md section 7.4. */
+/** Physical puzzle kinds. docs/chapters/01 to 10, "puzzle" beats. */
 export type PuzzleKind =
-  | 'crates'
-  | 'redactedFiles'
-  | 'cropCircleMaze'
+  | 'push'
+  | 'sheepGates'
+  | 'containers'
+  | 'redacted'
+  | 'maze'
   | 'spotTheAlien'
-  | 'gravitySwitches';
+  | 'junctions'
+  | 'gravity'
+  | 'broadcast';
 
-/** A chapter's physical puzzle. Puzzle-specific layout lives in the chapter. DESIGN.md section 7.4. */
+/** A chapter's one physical puzzle. Puzzle-specific layout lives in the chapter. DESIGN.md section 7.4. */
 export interface PuzzleDef {
-  readonly id: EncounterId;
+  readonly id: PuzzleSectionId;
   readonly chapter: ChapterNumber;
   readonly kind: PuzzleKind;
 }
 
 // ---------------------------------------------------------------------------
-// Encounters and completeNow (DESIGN.md sections 7.5 and 10)
+// Sections and completeNow (DESIGN.md sections 7.5 and 10)
 // ---------------------------------------------------------------------------
 
-/** Kinds of encounter. DESIGN.md sections 5, 7.2, 7.3, 7.4. */
-export type EncounterKind = 'combat' | 'boss' | 'puzzle' | 'deduction' | 'stealth';
-
-/**
- * Encounter kinds Myko can be called in on. Stealth only qualifies once it has
- * become a fight, at which point it is a 'combat' encounter. The Administrator
- * is excluded per-encounter via `EncounterDef.mykoCallable`. DESIGN.md section 7.5.
- */
-export const MYKO_CALLABLE_KINDS = ['combat', 'boss', 'puzzle', 'deduction'] as const satisfies readonly EncounterKind[];
-
-/** Which set of Myko call lines applies. DESIGN.md section 7.5 ("a fight call and a puzzle call"). */
+/** Which set of Myko call lines applies. DESIGN.md section 7.5. */
 export type MykoCallKind = 'fight' | 'puzzle';
 
-/** Who finished an encounter. DESIGN.md sections 7.5 and 10. */
+/** Call line set used for each completable kind. docs/chapters/README.md, DESIGN.md section 7.5. */
+export const MYKO_CALL_KIND_BY_SECTION = {
+  fight: 'fight',
+  boss: 'fight',
+  setpiece: 'fight',
+  puzzle: 'puzzle',
+  deduction: 'puzzle',
+} as const satisfies Readonly<Record<CompletableKind, MykoCallKind>>;
+
+/** Who finished a section. DESIGN.md sections 7.5 and 10. */
 export type CompletionSource = 'player' | 'myko' | 'debug';
 
-/** What finishing an encounter grants. DESIGN.md sections 7.3 and 7.5. */
+/** What finishing a section grants. DESIGN.md sections 7.3 and 7.5. */
 export interface Reward {
   readonly pickups?: readonly PickupItem[];
-  readonly clueIds?: readonly ClueId[];
+  readonly evidenceIds?: readonly EvidenceId[];
   readonly abilityIds?: readonly AbilityId[];
 }
 
-/** Static definition of an encounter. DESIGN.md sections 5 and 7.5. */
-export interface EncounterDef {
-  readonly id: EncounterId;
-  readonly kind: EncounterKind;
-  /** False for the Administrator and for stealth that has not become a fight. */
+/** Static definition of a section. docs/chapters/README.md. */
+export interface SectionDef {
+  readonly id: SectionId;
+  readonly kind: SectionKind;
+  /** False for stealth, explore and `c10.boss.administrator`. */
   readonly mykoCallable: boolean;
-  /** Checkpoint before this encounter, if any (every stealth section and boss has one). */
+  /** Checkpoint before this section (every stealth, boss and setpiece has one). */
   readonly checkpointId?: CheckpointId;
   readonly reward?: Reward;
 }
 
 /**
- * The single entry point every fight and puzzle exposes. The Myko call-in and
- * the QA playthrough both use it. Calling it must leave the game in the same
- * state as the player finishing normally, including rewards, then emit
- * `encounter:completed`. Calling it on a finished encounter does nothing.
- * DESIGN.md sections 7.5 and 10.
+ * The single entry point every fight, boss, setpiece, puzzle and deduction
+ * exposes. The Myko call-in and the QA playthrough both use it. It is
+ * synchronous: the Myko system plays the call-in, then calls it. It must leave
+ * the game in the same state as the player finishing normally, including
+ * rewards, then emit `section:completed`. On a finished section it does
+ * nothing. DESIGN.md sections 7.5 and 10.
  */
 export interface Completable {
-  readonly encounterId: EncounterId;
-  readonly kind: EncounterKind;
+  readonly sectionId: CompletableSectionId;
+  readonly kind: CompletableKind;
   isComplete(): boolean;
   completeNow(source: CompletionSource): void;
 }
 
 /**
- * The scripted way to complete a whole chapter, for QA. DESIGN.md section 10
- * ("Every chapter exposes ... a scripted way to complete it").
+ * The scripted way to complete a whole chapter, for QA. DESIGN.md section 10.
  */
 export interface ChapterCompletable {
   readonly chapter: ChapterNumber;
@@ -707,8 +924,8 @@ export interface ChapterCompletable {
 /** Where Myko is and what he is doing. DESIGN.md section 7.5. */
 export type MykoMode = 'following' | 'onPhone' | 'calledIn' | 'scripted';
 
-/** Things Myko comments on unprompted. DESIGN.md section 7.5. */
-export type MykoCommentTrigger = 'clue' | 'drink' | 'death' | 'hangover' | 'idle' | 'tangent';
+/** Things Myko comments on unprompted. DESIGN.md section 7.5, docs/chapters/08 (drinking in heat). */
+export type MykoCommentTrigger = 'clue' | 'drink' | 'death' | 'hangover' | 'idle' | 'heat' | 'tangent';
 
 /** Hint pair for one objective: a nudge, then the answer. DESIGN.md section 7.5. */
 export interface HintDef {
@@ -727,9 +944,19 @@ export interface ObjectiveDef {
 /** Record of one spent Myko call, stored in the save. DESIGN.md sections 7.5 and 7.6. */
 export interface MykoCallRecord {
   readonly chapter: ChapterNumber;
-  readonly encounterId: EncounterId;
+  readonly sectionId: CompletableSectionId;
   readonly kind: MykoCallKind;
 }
+
+/** One set of call lines: Myko's sequence plus the casebook entry. DESIGN.md section 7.5. */
+export interface MykoCallLineSet {
+  readonly sequenceId: DialogueId;
+  readonly casebookBodyTextId: TextId;
+  readonly casebookMarginTextId: TextId;
+}
+
+/** Myko's per-chapter call lines, one set per kind. DESIGN.md section 7.5. */
+export type MykoCallLines = Readonly<Record<MykoCallKind, MykoCallLineSet>>;
 
 // ---------------------------------------------------------------------------
 // Dialogue (DESIGN.md sections 2, 3, 7.5)
@@ -755,7 +982,7 @@ export type SpeakerId =
 export interface DialogueLine {
   readonly id: DialogueId;
   readonly speaker: SpeakerId;
-  /** Display name for generic NPCs (speaker 'npc'), e.g. a one-off character. */
+  /** Display name for generic NPCs (speaker 'npc'). */
   readonly speakerName?: string;
   /** Stage direction shown with the line, e.g. "quietly". */
   readonly direction?: string;
@@ -779,8 +1006,8 @@ export interface DialogueSequence {
 // Chapters and checkpoints (DESIGN.md sections 5, 7.2, 10)
 // ---------------------------------------------------------------------------
 
-/** Why a checkpoint exists. DESIGN.md section 7.2. */
-export type CheckpointKind = 'chapterStart' | 'stealth' | 'boss' | 'other';
+/** Why a checkpoint exists. DESIGN.md section 7.2, docs/chapters/README.md. */
+export type CheckpointKind = 'chapterStart' | 'stealth' | 'boss' | 'setpiece' | 'other';
 
 /** A checkpoint. DESIGN.md sections 7.2 and 7.6. */
 export interface CheckpointDef {
@@ -790,15 +1017,19 @@ export interface CheckpointDef {
   readonly position: Vec2;
 }
 
-/** Walkability for pathfinding, row-major, one entry per tile. DESIGN.md section 8 (16 x 16 tiles). */
-export interface CollisionGrid {
+/** Per-tile flags, row-major, one entry per tile. DESIGN.md section 8 (16 x 16 tiles). */
+export interface TileGrid {
   readonly widthTiles: number;
   readonly heightTiles: number;
-  /** true = blocked. Length is widthTiles * heightTiles. */
+  /** true = impassable. Length is widthTiles * heightTiles. */
   readonly blocked: readonly boolean[];
+  /** true = blocks vision cones and headlights (turf stacks, containers, outcrops). */
+  readonly blocksSight: readonly boolean[];
+  /** true = shade, where heat falls (chapter 8). Absent where heat does not apply. */
+  readonly shade?: readonly boolean[];
 }
 
-/** One connected screen. DESIGN.md section 5 ("two or three connected screens", at most 120 x 80 tiles per chapter). */
+/** One connected screen. docs/chapters, "Screens" tables. */
 export interface ScreenDef {
   readonly id: ScreenId;
   readonly region: RegionId;
@@ -806,15 +1037,6 @@ export interface ScreenDef {
   readonly heightTiles: number;
   /** Location card caption, if this screen shows one. */
   readonly locationCardTextId?: TextId;
-}
-
-/** Myko's per-chapter call-in lines. DESIGN.md section 7.5. */
-export interface MykoCallLines {
-  readonly fight: DialogueId;
-  readonly puzzle: DialogueId;
-  /** Casebook entry written after a call. */
-  readonly casebookBodyTextId: TextId;
-  readonly casebookMarginTextId: TextId;
 }
 
 /**
@@ -827,17 +1049,19 @@ export interface ChapterDef {
   readonly screens: readonly ScreenDef[];
   readonly startScreenId: ScreenId;
   readonly checkpoints: readonly CheckpointDef[];
-  readonly encounters: readonly EncounterDef[];
+  /** Every section in beat order. */
+  readonly sections: readonly SectionDef[];
   readonly stealthSections: readonly StealthSectionDef[];
-  readonly puzzle?: PuzzleDef;
+  /** Every chapter has exactly one physical puzzle. */
+  readonly puzzle: PuzzleDef;
   readonly deductionBoard?: DeductionBoardDef;
-  readonly clues: readonly ClueId[];
+  readonly evidence: readonly EvidenceId[];
   readonly objectives: readonly ObjectiveDef[];
   /** Abilities unlocked during this chapter. */
   readonly newAbilities: readonly AbilityId[];
   readonly mykoCallLines: MykoCallLines;
-  /** Encounter whose completion ends the chapter (boss or set piece). */
-  readonly finaleEncounterId: EncounterId;
+  /** Section whose completion leads into the closing scene. */
+  readonly finaleSectionId: BossId;
 }
 
 // ---------------------------------------------------------------------------
@@ -847,48 +1071,61 @@ export interface ChapterDef {
 /** Bumped whenever `SaveState` changes shape. DESIGN.md section 7.6. */
 export const SAVE_VERSION = 1 as const;
 
-/** Player state captured at a checkpoint. DESIGN.md sections 7.1 and 7.6. */
+/**
+ * Player state captured at each save. Death restores exactly this.
+ * DESIGN.md sections 7.1 and 7.6.
+ */
 export interface PlayerSnapshot {
   readonly health: number;
   readonly buzz: number;
   readonly empties: number;
-  readonly drinkSlots: readonly DrinkSlot[];
-  readonly selectedDrinkIndex: number;
+  readonly drinkSlots: DrinkSlots;
+  readonly selectedDrink: DrinkSlotIndex;
   readonly selectedSpecial: SpecialAbilityId | null;
   readonly unlockedAbilities: readonly AbilityId[];
   readonly hangover: HangoverState;
 }
 
-/** Audio settings. DESIGN.md section 9 (separate sliders). */
+/** Where Andrew reappears after death. DESIGN.md sections 7.2 and 7.6. */
+export interface RespawnPoint {
+  readonly screenId: ScreenId;
+  readonly position: Vec2;
+}
+
+/**
+ * Everything persisted for a game in local storage. Written at each
+ * checkpoint and immediately whenever a Myko call is used (that save acts as
+ * a checkpoint). Death reloads it. DESIGN.md sections 7.5 and 7.6.
+ */
+export interface SaveState {
+  readonly version: typeof SAVE_VERSION;
+  readonly chapter: ChapterNumber;
+  /** Last checkpoint reached. */
+  readonly checkpointId: CheckpointId;
+  readonly respawn: RespawnPoint;
+  readonly player: PlayerSnapshot;
+  /** Calls left for the whole game. Starts at `tuning.myko.callsPerGame`, never refills. */
+  readonly mykoCallsLeft: number;
+  readonly mykoCalls: readonly MykoCallRecord[];
+  /** Chapters finished, for Chapter Select. */
+  readonly finishedChapters: readonly ChapterNumber[];
+  readonly completedSectionIds: readonly SectionId[];
+  readonly cleanStealthRunIds: readonly StealthSectionId[];
+  readonly collectedPickupIds: readonly PickupId[];
+  readonly casebook: readonly CasebookEntry[];
+  /** Hints already given, per objective (0, 1 or 2). */
+  readonly hintsGiven: Readonly<Record<ObjectiveId, number>>;
+}
+
+/**
+ * Audio settings, stored under their own key, separate from `SaveState`.
+ * New Game keeps them. DESIGN.md section 9.
+ */
 export interface AudioSettings {
   /** 0..1 */
   readonly musicVolume: number;
   /** 0..1 */
   readonly effectsVolume: number;
-}
-
-/**
- * Everything persisted to local storage. Saved at each checkpoint and
- * immediately whenever a Myko call is used. DESIGN.md sections 7.5 and 7.6.
- */
-export interface SaveState {
-  readonly version: typeof SAVE_VERSION;
-  readonly chapter: ChapterNumber;
-  readonly checkpointId: CheckpointId;
-  readonly player: PlayerSnapshot;
-  /** Calls left for the whole game. Starts at the tuning value (3), never refills. */
-  readonly mykoCallsLeft: number;
-  readonly mykoCalls: readonly MykoCallRecord[];
-  /** Chapters finished, for Chapter Select. */
-  readonly finishedChapters: readonly ChapterNumber[];
-  readonly completedEncounterIds: readonly EncounterId[];
-  readonly cleanStealthRunIds: readonly EncounterId[];
-  readonly collectedPickupIds: readonly PickupId[];
-  readonly casebook: readonly CasebookEntry[];
-  readonly proofIds: readonly ProofId[];
-  /** Hints already given, per objective (0, 1 or 2). */
-  readonly hintsGiven: Readonly<Record<ObjectiveId, number>>;
-  readonly settings: AudioSettings;
 }
 
 // ---------------------------------------------------------------------------
@@ -908,24 +1145,30 @@ export interface BuzzTuning {
   readonly banjaxedResetTo: number;
 }
 
-/** Hangover tuning. DESIGN.md section 7.1. */
+/** Hangover tuning. DESIGN.md section 7.1, docs/chapters/README.md "Carry-over rules". */
 export interface HangoverTuning {
   /** Lowest Buzz state at chapter end that causes a hangover. */
   readonly triggerState: BuzzState;
+  /** Earliest chapter whose end can cause a hangover (3). */
+  readonly carryOverFromChapterEnd: ChapterNumber;
+  /** Chapters that always start with a hangover regardless of Buzz ([4]). */
+  readonly forcedAtChapterStart: readonly ChapterNumber[];
   /** Multiplier on max health while hungover (0.75 for "reduced by 25%"). */
   readonly maxHealthMultiplier: number;
   /** Over-brightness strength of the screen effect. */
   readonly brightness: number;
 }
 
-/** Player movement and noise. DESIGN.md sections 7.2 and 7.3. */
+/** Player movement, noise and carrying. DESIGN.md sections 7.1, 7.2 and 7.3. */
 export interface PlayerTuning {
   readonly maxHealth: number;
-  readonly moveSpeed: number;
+  readonly walkSpeed: number;
+  readonly runSpeed: number;
   readonly sneakSpeedMultiplier: number;
   readonly footstepNoiseRadius: number;
   readonly sneakNoiseRadius: number;
-  readonly drinkSlotCount: number;
+  /** Max count of one drink type in one slot. */
+  readonly drinkSlotCap: number;
   readonly maxEmpties: number;
 }
 
@@ -937,12 +1180,19 @@ export interface StealthTuning {
   readonly investigateGiveUpMs: number;
   /** Stillness required before Act Natural takes effect. */
   readonly actNaturalStillMs: number;
+  /** Vision range multiplier for seated guards. */
+  readonly seatedVisionMultiplier: number;
 }
 
-/** Heat tuning (chapter 8). DESIGN.md section 5. */
+/** Heat tuning. docs/chapters/08-the-long-road.md "Heat". */
 export interface HeatTuning {
   readonly max: number;
-  readonly risePerSecond: number;
+  readonly risePerSecondInSun: number;
+  readonly runningRiseMultiplier: number;
+  readonly fallPerSecondInShade: number;
+  readonly fullHeatDamagePerSecond: number;
+  /** Fraction of max above which thermal masts see Andrew (0.5). */
+  readonly thermalDetectFraction: number;
 }
 
 /** Myko tuning. DESIGN.md section 7.5. */
@@ -962,14 +1212,19 @@ export interface MykoTuning {
 
 /** Investigation tuning. DESIGN.md section 7.4. */
 export interface InvestigationTuning {
-  /** Proof needed by the end of chapter 9 (5). */
-  readonly requiredProofCount: number;
   readonly interactRadius: number;
+}
+
+/** Chapter Select start state. docs/chapters/README.md "Carry-over rules". */
+export interface ChapterSelectTuning {
+  /** Drinks given at a Chapter Select start (three stout). */
+  readonly startingDrinks: DrinkSlots;
 }
 
 /**
  * Root shape of `src/content/tuning.ts`. Every balance number in the game.
- * DESIGN.md section 10 ("No balance number is written anywhere except tuning.ts").
+ * Section-specific numbers are keyed by section ID. DESIGN.md section 10,
+ * docs/chapters/README.md.
  */
 export interface Tuning {
   readonly buzz: BuzzTuning;
@@ -979,15 +1234,21 @@ export interface Tuning {
   readonly heat: HeatTuning;
   readonly myko: MykoTuning;
   readonly investigation: InvestigationTuning;
+  readonly chapterSelect: ChapterSelectTuning;
   readonly drinks: Readonly<Record<DrinkId, DrinkDef>>;
   readonly food: Readonly<Record<FoodId, FoodDef>>;
   readonly abilities: Readonly<Record<AbilityId, AbilityDef>>;
   readonly enemies: Readonly<Record<EnemyId, EnemyDef>>;
+  readonly bosses: Readonly<Record<BossId, BossDef>>;
+  readonly fights: Readonly<Partial<Record<FightSectionId | AlarmFightId, FightDef>>>;
 }
 
 // ---------------------------------------------------------------------------
 // Events (DESIGN.md section 10)
 // ---------------------------------------------------------------------------
+
+/** Why a save was written. DESIGN.md section 7.6. */
+export type SaveReason = 'checkpoint' | 'mykoCall' | 'chapterComplete';
 
 /**
  * Payload for every game event, keyed by event name. Systems, UI, audio and
@@ -999,41 +1260,47 @@ export interface GameEventPayloads {
   'buzz:banjaxedPhase': { readonly phase: BanjaxedPhase };
   'hangover:started': Record<string, never>;
   'hangover:cured': Record<string, never>;
-  'heat:changed': { readonly value: number };
+  'heat:changed': HeatSnapshot;
   'player:damaged': { readonly hit: HitInfo; readonly health: Health };
   'player:healed': { readonly amount: number; readonly health: Health };
   'player:died': { readonly checkpointId: CheckpointId };
-  'player:respawned': { readonly checkpointId: CheckpointId };
+  'player:respawned': { readonly respawn: RespawnPoint };
   'enemy:damaged': { readonly hit: HitInfo; readonly health: Health };
   'enemy:defeated': { readonly instanceId: string; readonly enemyId: EnemyId; readonly by: CompletionSource };
   'enemy:telegraph': { readonly instanceId: string; readonly attackId: string; readonly durationMs: number };
+  'enemy:revealed': { readonly instanceId: string; readonly enemyId: EnemyId };
+  'boss:phaseChanged': { readonly bossId: BossId; readonly phaseId: string };
   'drink:consumed': { readonly drinkId: DrinkId };
-  'drink:selected': { readonly index: number; readonly drinkId: DrinkId | null };
+  'drink:selected': { readonly index: DrinkSlotIndex; readonly drinkId: DrinkId | null };
   'food:consumed': { readonly foodId: FoodId };
   'pickup:collected': { readonly pickupId: PickupId; readonly item: PickupItem };
+  'pickup:refused': { readonly pickupId: PickupId; readonly reason: PickupRefusal };
   'empties:changed': { readonly count: number };
   'ability:used': { readonly abilityId: AbilityId };
   'ability:unlocked': { readonly abilityId: AbilityId };
   'ability:selectedSpecial': { readonly abilityId: SpecialAbilityId };
   'stealth:noise': NoiseEvent;
   'stealth:alertChanged': { readonly instanceId: string; readonly from: AlertState; readonly to: AlertState };
-  'stealth:alarm': { readonly sectionId: EncounterId };
-  'stealth:cleanRun': { readonly sectionId: EncounterId };
-  'clue:found': { readonly clueId: ClueId };
-  'proof:collected': { readonly proofId: ProofId };
+  'stealth:alarm': { readonly sectionId: StealthSectionId; readonly fightId: AlarmFightId };
+  'stealth:cleanRun': { readonly sectionId: StealthSectionId };
+  'evidence:found': { readonly evidenceId: EvidenceId };
   'casebook:entryAdded': { readonly entry: CasebookEntry };
-  'deduction:submitted': { readonly boardId: EncounterId; readonly clueIds: readonly ClueId[]; readonly correct: boolean };
-  'encounter:started': { readonly encounterId: EncounterId; readonly kind: EncounterKind };
-  'encounter:completed': { readonly encounterId: EncounterId; readonly kind: EncounterKind; readonly by: CompletionSource };
+  'deduction:submitted': {
+    readonly deductionId: DeductionSectionId;
+    readonly evidenceIds: readonly EvidenceId[];
+    readonly correct: boolean;
+  };
+  'section:started': { readonly sectionId: SectionId; readonly kind: SectionKind };
+  'section:completed': { readonly sectionId: SectionId; readonly kind: SectionKind; readonly by: CompletionSource };
   'myko:hintRequested': { readonly objectiveId: ObjectiveId; readonly level: 1 | 2 };
-  'myko:callStarted': { readonly encounterId: EncounterId; readonly kind: MykoCallKind; readonly callsLeft: number };
-  'myko:callRefused': { readonly reason: 'noCallsLeft' | 'notCallable' | 'noEncounter' };
+  'myko:callStarted': { readonly sectionId: CompletableSectionId; readonly kind: MykoCallKind; readonly callsLeft: number };
+  'myko:callRefused': { readonly reason: 'noCallsLeft' | 'notCallable' | 'noSection' };
   'myko:comment': { readonly trigger: MykoCommentTrigger; readonly dialogueId: DialogueId };
   'dialogue:show': { readonly sequenceId: DialogueId };
   'dialogue:finished': { readonly sequenceId: DialogueId };
   'objective:changed': { readonly objectiveId: ObjectiveId };
   'checkpoint:reached': { readonly checkpointId: CheckpointId };
-  'save:written': { readonly reason: 'checkpoint' | 'mykoCall' | 'chapterComplete' };
+  'save:written': { readonly reason: SaveReason };
   'chapter:started': { readonly chapter: ChapterNumber };
   'chapter:completed': { readonly chapter: ChapterNumber; readonly endBuzzState: BuzzState };
   'game:paused': Record<string, never>;
@@ -1055,10 +1322,13 @@ export const GameEvents = {
   EnemyDamaged: 'enemy:damaged',
   EnemyDefeated: 'enemy:defeated',
   EnemyTelegraph: 'enemy:telegraph',
+  EnemyRevealed: 'enemy:revealed',
+  BossPhaseChanged: 'boss:phaseChanged',
   DrinkConsumed: 'drink:consumed',
   DrinkSelected: 'drink:selected',
   FoodConsumed: 'food:consumed',
   PickupCollected: 'pickup:collected',
+  PickupRefused: 'pickup:refused',
   EmptiesChanged: 'empties:changed',
   AbilityUsed: 'ability:used',
   AbilityUnlocked: 'ability:unlocked',
@@ -1067,12 +1337,11 @@ export const GameEvents = {
   StealthAlertChanged: 'stealth:alertChanged',
   StealthAlarm: 'stealth:alarm',
   StealthCleanRun: 'stealth:cleanRun',
-  ClueFound: 'clue:found',
-  ProofCollected: 'proof:collected',
+  EvidenceFound: 'evidence:found',
   CasebookEntryAdded: 'casebook:entryAdded',
   DeductionSubmitted: 'deduction:submitted',
-  EncounterStarted: 'encounter:started',
-  EncounterCompleted: 'encounter:completed',
+  SectionStarted: 'section:started',
+  SectionCompleted: 'section:completed',
   MykoHintRequested: 'myko:hintRequested',
   MykoCallStarted: 'myko:callStarted',
   MykoCallRefused: 'myko:callRefused',
