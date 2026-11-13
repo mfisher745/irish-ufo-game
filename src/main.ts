@@ -4,6 +4,7 @@ import { installDebugHooks, parseDebugEntry } from './core/debug';
 import { BootScene } from './core/scenes/BootScene';
 import { GameScene } from './core/scenes/GameScene';
 import { GameEvents } from './core/types';
+import './chapters';
 import { session, uiState } from './systems';
 import { UiSceneKeys, createUiScenes } from './ui';
 
