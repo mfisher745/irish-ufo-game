@@ -129,7 +129,7 @@ export function renderEffect(id: EffectId, s: Synth, t: number): void {
       tone(s, { type: 'sine', f0: 100, f1: 34, t: t + 0.1, dur: 0.3, gain: 0.7 });
       break;
     case 'bottleThrow':
-      noiseBurst(s, { t, dur: 0.18, gain: 0.25, filter: 'bandpass', f0: 500, f1: 1800, q: 3 });
+      noiseBurst(s, { t, dur: 0.18, gain: 0.7, filter: 'bandpass', f0: 500, f1: 1800, q: 3 });
       break;
     case 'bottleSmash':
       noiseBurst(s, { t, dur: 0.35, gain: 0.45, filter: 'highpass', f0: 3000, f1: 6000 });
@@ -140,7 +140,7 @@ export function renderEffect(id: EffectId, s: Synth, t: number): void {
       noiseBurst(s, { t, dur: 0.3, gain: 0.06, filter: 'bandpass', f0: 900, q: 4 });
       break;
     case 'footstep':
-      noiseBurst(s, { t, dur: 0.05, gain: 0.18, f0: 700, f1: 200 });
+      noiseBurst(s, { t, dur: 0.05, gain: 0.35, f0: 700, f1: 200 });
       break;
     case 'hurt':
       tone(s, { type: 'square', f0: 330, f1: 110, t, dur: 0.22, gain: 0.3 });

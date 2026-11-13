@@ -88,7 +88,7 @@ export class DeductionScene extends Phaser.Scene {
     if (ok) {
       this.shared.hooks.play?.('uiSelect');
       this.resultUntil = this.time.now + RESULT_MS;
-      rect(this, 0, 150, 480, 80, 'ink', 20);
+      rect(this, 0, 150, 480, 120, 'ink', 20);
       makeLabel(this, 240, 160, wrapText(text(board.leadTextId), 64).join('\n'), 'amberLight', { anchor: 'centre', depth: 21 });
       if (hasText(board.leadMarginTextId)) {
         makeLabel(this, 240, 196, wrapText(text(board.leadMarginTextId), 64).join('\n'), 'beanie', { anchor: 'centre', depth: 21 });
@@ -115,7 +115,15 @@ export class DeductionScene extends Phaser.Scene {
     for (const [a, b] of this.sel.links()) {
       const ca = this.cards.find((c) => c.id === a);
       const cb = this.cards.find((c) => c.id === b);
-      if (ca !== undefined && cb !== undefined) this.lines.lineBetween(ca.cx, ca.cy, cb.cx, cb.cy);
+      if (ca === undefined || cb === undefined) continue;
+      // Join facing edges so the line never crosses the titles.
+      if (Math.abs(ca.cy - cb.cy) < 1) {
+        const [l, r] = ca.cx < cb.cx ? [ca, cb] : [cb, ca];
+        this.lines.lineBetween(l.cx + CARD.w / 2, l.cy, r.cx - CARD.w / 2, r.cy);
+      } else {
+        const [u, d] = ca.cy < cb.cy ? [ca, cb] : [cb, ca];
+        this.lines.lineBetween(u.cx, u.cy + CARD.h / 2, d.cx, d.cy - CARD.h / 2);
+      }
     }
     this.confirmBg.setFillStyle(PALETTE[this.sel.complete ? 'amber' : 'coal']);
     setLabelColour(this.confirmLabel, this.sel.complete ? 'ink' : 'steel');

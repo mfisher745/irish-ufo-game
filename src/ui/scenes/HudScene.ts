@@ -150,7 +150,7 @@ export class HudScene extends Phaser.Scene {
       rect(this, HEAT_METER.x, HEAT_METER.y, HEAT_METER.width, HEAT_METER.height, 'coal', D.hud),
     ];
     this.heatFill = rect(this, HEAT_METER.x, HEAT_METER.y, 0, HEAT_METER.height, 'rust', D.hud + 1);
-    this.heatLabel = makeLabel(this, HEAT_METER.x + HEAT_METER.width + 6, HEAT_METER.y - 3, text('ui.hud.heat'), 'sand', { depth: D.hud });
+    this.heatLabel = makeLabel(this, HEAT_METER.x + HEAT_METER.width + 6, HEAT_METER.y, text('ui.hud.heat'), 'sand', { depth: D.hud });
   }
 
   private buildStrip(): void {

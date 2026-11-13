@@ -111,7 +111,7 @@ export class Menu {
   private dragSlider(item: Extract<MenuItem, { kind: 'slider' }>, p: Phaser.Input.Pointer): void {
     const left = this.opts.x + this.opts.width - SLIDER_WIDTH - 6;
     const raw = Phaser.Math.Clamp((p.x - left) / SLIDER_WIDTH, 0, 1);
-    const v = Math.round(raw / SLIDER_STEP) * SLIDER_STEP;
+    const v = Math.round(raw / SLIDER_STEP) / (1 / SLIDER_STEP);
     if (Math.abs(v - item.get()) > 1e-6) {
       item.set(v);
       this.opts.hooks.play?.('uiMove');
@@ -146,7 +146,7 @@ export class Menu {
     const item = this.items[this.selected];
     if (item === undefined) return;
     if (item.kind === 'slider') {
-      item.set(Phaser.Math.Clamp(Math.round((item.get() + dir * SLIDER_STEP) / SLIDER_STEP) * SLIDER_STEP, 0, 1));
+      item.set(Phaser.Math.Clamp(Math.round((item.get() + dir * SLIDER_STEP) / SLIDER_STEP) / (1 / SLIDER_STEP), 0, 1));
       this.opts.hooks.play?.('uiMove');
     } else if (item.kind === 'toggle') {
       item.set(!item.get());
