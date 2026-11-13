@@ -4,7 +4,8 @@
  */
 
 import type { AttackShape, Vec2 } from '../core/types';
-import { angleDiff, angleTo, distance, distanceToSegment, fromAngle, add, normalize, scale, sub } from './geometry';
+import { angleDiff, angleTo, clamp, distance, distanceToSegment, fromAngle, add, normalize, scale, sub } from './geometry';
+import type { Rect } from './geometry';
 
 /**
  * Whether a target circle at `target` (radius `r`) is inside `shape` cast
@@ -32,6 +33,30 @@ export function shapeHits(shape: AttackShape, origin: Vec2, angleDeg: number, ta
       return distanceToSegment(target, origin, end) <= shape.width / 2 + r;
     }
   }
+}
+
+/** Sample spacing for `shapeHitsRect`, in pixels. Small enough that no arc edge slips between samples at melee range. */
+const RECT_SAMPLE_STEP = 4;
+
+/**
+ * Whether any part of an axis-aligned rectangle is inside `shape` cast from
+ * `origin` toward `angleDeg` (a punch against the fruit machine). Tested
+ * on the point of the rectangle nearest the origin plus a 4-pixel grid over it.
+ */
+export function shapeHitsRect(shape: AttackShape, origin: Vec2, angleDeg: number, rect: Rect): boolean {
+  if (shape.kind === 'none' || shape.kind === 'projectile') return false;
+  const nearest = { x: clamp(origin.x, rect.x, rect.x + rect.width), y: clamp(origin.y, rect.y, rect.y + rect.height) };
+  if (shapeHits(shape, origin, angleDeg, nearest, 0)) return true;
+  if (distance(origin, nearest) > shapeReach(shape)) return false;
+  const nx = Math.max(1, Math.ceil(rect.width / RECT_SAMPLE_STEP));
+  const ny = Math.max(1, Math.ceil(rect.height / RECT_SAMPLE_STEP));
+  for (let j = 0; j <= ny; j++) {
+    for (let i = 0; i <= nx; i++) {
+      const p = { x: rect.x + (rect.width * i) / nx, y: rect.y + (rect.height * j) / ny };
+      if (shapeHits(shape, origin, angleDeg, p, 0)) return true;
+    }
+  }
+  return false;
 }
 
 /** Reach of a shape, for "am I close enough to use this" checks. */

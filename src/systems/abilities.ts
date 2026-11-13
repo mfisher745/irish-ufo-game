@@ -101,6 +101,13 @@ export class Abilities {
     return this.unlockedSet.has(id);
   }
 
+  /** Unlocked, and every ability it `requires` is unlocked too (Sliotar Strike needs the hurley). */
+  usable(id: AbilityId, seen: ReadonlySet<AbilityId> = new Set()): boolean {
+    if (!this.unlockedSet.has(id) || seen.has(id)) return false;
+    const req = this.defs[id].requires;
+    return req === undefined || this.usable(req, new Set([...seen, id]));
+  }
+
   selectedSpecial(): SpecialAbilityId | null {
     return this.selected;
   }
@@ -127,13 +134,13 @@ export class Abilities {
 
   /** The ability that currently answers a slot, honouring `replaces`. */
   activeFor(slot: AbilityDef['slot']): AbilityId | null {
-    const candidates = [...this.unlockedSet].filter((id) => this.defs[id].slot === slot);
+    const candidates = [...this.unlockedSet].filter((id) => this.defs[id].slot === slot && this.usable(id));
     const replaced = new Set(candidates.map((id) => this.defs[id].replaces).filter((r): r is AbilityId => r !== undefined));
     return candidates.find((id) => !replaced.has(id)) ?? null;
   }
 
   cycleSpecial(): void {
-    const owned = SPECIAL_ABILITIES.filter((id) => this.unlockedSet.has(id));
+    const owned = SPECIAL_ABILITIES.filter((id) => this.usable(id));
     if (owned.length === 0) return;
     const i = this.selected ? owned.indexOf(this.selected) : -1;
     const next = owned[(i + 1) % owned.length];
@@ -189,7 +196,7 @@ export class Abilities {
       if (a) out.push(a);
     }
 
-    const sliotar = this.has('sliotarStrike');
+    const sliotar = this.usable('sliotarStrike');
     if (sliotar) {
       if (input.pressed.has('ranged')) {
         this.charging = true;
@@ -203,7 +210,7 @@ export class Abilities {
         const a = held >= chargeMs ? this.tryProjectile('sliotarStrike', ctx) : this.tryProjectile('bottleThrow', ctx);
         if (a) out.push(a);
       }
-    } else if (input.pressed.has('ranged') && this.has('bottleThrow')) {
+    } else if (input.pressed.has('ranged') && this.usable('bottleThrow')) {
       const a = this.tryProjectile('bottleThrow', ctx);
       if (a) out.push(a);
     }
@@ -265,7 +272,7 @@ export class Abilities {
   }
 
   private tryProjectile(id: 'bottleThrow' | 'sliotarStrike', ctx: AbilityContext): AbilityAction | null {
-    if (!this.has(id)) {
+    if (!this.usable(id)) {
       this.lastRefusal = 'locked';
       return null;
     }
@@ -278,7 +285,7 @@ export class Abilities {
 
   private trySpecial(ctx: AbilityContext): AbilityAction | null {
     const id = this.selected;
-    if (!id || !this.has(id)) {
+    if (!id || !this.usable(id)) {
       this.lastRefusal = 'locked';
       return null;
     }

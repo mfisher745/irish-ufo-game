@@ -7,7 +7,7 @@
  * New Game.
  */
 
-import { PENDING_TUNING } from '../systems/pendingTuning';
+import { TUNING } from '../content/tuning';
 import { SAVE_VERSION } from './types';
 import type { AudioSettings, SaveState } from './types';
 
@@ -103,7 +103,7 @@ export class SaveStore {
   }
 
   loadAudio(): AudioSettings {
-    const defaults = PENDING_TUNING.audioDefaults;
+    const defaults = TUNING.audioDefaults;
     const raw = this.storage.getItem(AUDIO_KEY);
     if (raw === null) return defaults;
     try {

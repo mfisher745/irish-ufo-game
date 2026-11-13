@@ -3,10 +3,10 @@
  * Plain TypeScript; the world spawns and owns the actors.
  */
 
+import { TUNING } from '../content/tuning';
 import { GameEvents } from '../core/types';
 import type { AlarmFightId, CompletionSource, EnemyId, FightDef, FightSectionId, GameEventBus, Reward, Vec2 } from '../core/types';
 import type { EnemyActor } from './enemies';
-import { PENDING_TUNING } from './pendingTuning';
 import { CompletableSection } from './sections';
 import type { SectionHost } from './sections';
 
@@ -82,7 +82,7 @@ export class FightRunner extends CompletableSection {
     }
     if (this.wave + 1 < this.def.waves.length) {
       this.hooks.onWaveCleared?.(this.wave);
-      this.betweenMs = PENDING_TUNING.combat.betweenWavesMs;
+      this.betweenMs = TUNING.combat.betweenWavesMs;
       return;
     }
     this.hooks.onWaveCleared?.(this.wave);

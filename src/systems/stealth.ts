@@ -27,7 +27,6 @@ import type {
 } from '../core/types';
 import { angleDiff, angleFromFacing, angleTo, distance, normalize, scale, sub, add, turnToward } from './geometry';
 import { findPath, lineOfSight, moveBox, walkableLine } from './grid';
-import { PENDING_TUNING } from './pendingTuning';
 
 // ---------------------------------------------------------------------------
 // Pure perception
@@ -157,7 +156,7 @@ export class Guard {
     this.detection = stepDetection(this.detection, seen, dtMs);
     if (seen) {
       if (this.alert !== 'detecting') this.setAlert('detecting', bus);
-      this.facingDeg = turnToward(this.facingDeg, angleTo(this.pos, target.pos), (PENDING_TUNING.stealth.turnDegPerSecond * dtMs) / 1000);
+      this.facingDeg = turnToward(this.facingDeg, angleTo(this.pos, target.pos), (TUNING.stealth.turnDegPerSecond * dtMs) / 1000);
       this.investigateTarget = target.pos;
       if (this.detection >= 1) {
         this.setAlert('alarm', bus);
@@ -185,14 +184,14 @@ export class Guard {
       return;
     }
     if (this.placement.seated) {
-      this.facingDeg = turnToward(this.facingDeg, angleTo(this.pos, t), (PENDING_TUNING.stealth.turnDegPerSecond * dtMs) / 1000);
+      this.facingDeg = turnToward(this.facingDeg, angleTo(this.pos, t), (TUNING.stealth.turnDegPerSecond * dtMs) / 1000);
       return;
     }
     if (distance(this.pos, t) > 6) this.walkToward(t, dtMs, grid);
     else {
       this.lookMs += dtMs;
-      this.facingDeg += (PENDING_TUNING.stealth.turnDegPerSecond * dtMs) / 1000 / 2;
-      if (this.lookMs >= PENDING_TUNING.stealth.lookAroundMs) this.investigateMs = 0;
+      this.facingDeg += (TUNING.stealth.turnDegPerSecond * dtMs) / 1000 / 2;
+      if (this.lookMs >= TUNING.stealth.lookAroundMs) this.investigateMs = 0;
     }
   }
 
@@ -204,7 +203,7 @@ export class Guard {
       this.walkToward(wp.position, dtMs, grid);
       return;
     }
-    if (wp.facing) this.facingDeg = turnToward(this.facingDeg, angleFromFacing(wp.facing), (PENDING_TUNING.stealth.turnDegPerSecond * dtMs) / 1000);
+    if (wp.facing) this.facingDeg = turnToward(this.facingDeg, angleFromFacing(wp.facing), (TUNING.stealth.turnDegPerSecond * dtMs) / 1000);
     if (route.mode === 'stationary') return;
     this.waitMs -= dtMs;
     if (this.waitMs > 0) return;
@@ -224,12 +223,12 @@ export class Guard {
       aim = this.path[0] ?? goal;
     }
     const dir = normalize(sub(aim, this.pos));
-    const speed = this.moveSpeed * PENDING_TUNING.stealth.patrolSpeedFraction;
+    const speed = this.moveSpeed * TUNING.stealth.patrolSpeedFraction;
     const step = Math.min((speed * dtMs) / 1000, distance(this.pos, aim));
-    const size = PENDING_TUNING.player.bodyWidth;
+    const size = TUNING.player.bodyWidth;
     this.pos = moveBox(grid, this.pos, size, size, scale(dir, step)).position;
     if (dir.x !== 0 || dir.y !== 0) {
-      this.facingDeg = turnToward(this.facingDeg, angleTo(this.pos, add(this.pos, dir)), (PENDING_TUNING.stealth.turnDegPerSecond * dtMs) / 1000);
+      this.facingDeg = turnToward(this.facingDeg, angleTo(this.pos, add(this.pos, dir)), (TUNING.stealth.turnDegPerSecond * dtMs) / 1000);
     }
   }
 

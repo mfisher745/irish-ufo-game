@@ -348,10 +348,13 @@ const enemies: Tuning['enemies'] = {
 // Bosses and set pieces (docs/chapters, "Boss" and "Set piece" sections)
 // ---------------------------------------------------------------------------
 
+type BossMotion = Pick<BossDef, 'moveSpeed' | 'dazedMs' | 'dazedDamageMultiplier'>;
+
 const boss = (
   id: BossDef['id'],
   kind: BossDef['kind'],
   arena: [number, number],
+  motion: BossMotion,
   end: BossDef['end'],
   phases: BossDef['phases'],
   maxHealth?: number,
@@ -364,6 +367,7 @@ const boss = (
   phases,
   end,
   arenaTiles: { width: arena[0], height: arena[1] },
+  ...motion,
 });
 
 const beaten: BossDef['end'] = { kind: 'healthBelow', fraction: 0 };
@@ -373,6 +377,8 @@ const bosses: Tuning['bosses'] = {
     'c1.boss.bigtom',
     'boss',
     [30, 12],
+    // Dazed for the bull charge's 2000 ms recovery and takes double damage (docs/chapters/01).
+    { moveSpeed: 48, dazedMs: 2000, dazedDamageMultiplier: 2 },
     beaten,
     [
       {
@@ -398,7 +404,8 @@ const bosses: Tuning['bosses'] = {
     ],
     220,
   ),
-  'c2.setpiece.ram': boss('c2.setpiece.ram', 'setpiece', [90, 12], { kind: 'reachExit' }, [
+  // The ram must stay faster than Andrew's runSpeed (100).
+  'c2.setpiece.ram': boss('c2.setpiece.ram', 'setpiece', [90, 12], { moveSpeed: 115 }, { kind: 'reachExit' }, [
     {
       id: 'chase',
       trigger: { kind: 'start' },
@@ -411,6 +418,7 @@ const bosses: Tuning['bosses'] = {
     'c3.boss.halloran',
     'boss',
     [26, 14],
+    { moveSpeed: 40 },
     beaten,
     [
       {
@@ -439,6 +447,7 @@ const bosses: Tuning['bosses'] = {
     'c4.boss.foreman',
     'boss',
     [28, 16],
+    { moveSpeed: 50 },
     beaten,
     [
       {
@@ -464,6 +473,7 @@ const bosses: Tuning['bosses'] = {
     'c5.boss.pruitt1',
     'boss',
     [30, 16],
+    { moveSpeed: 55 },
     { kind: 'healthBelow', fraction: 0.15 },
     [
       {
@@ -491,6 +501,8 @@ const bosses: Tuning['bosses'] = {
     'c6.setpiece.combine',
     'setpiece',
     [36, 20],
+    // The harvester's crawl between passes; the cab lights are placed stationary.
+    { moveSpeed: 30 },
     { kind: 'targetsDestroyed', count: 3 },
     [
       {
@@ -519,6 +531,7 @@ const bosses: Tuning['bosses'] = {
     'c7.boss.mascots',
     'boss',
     [30, 14],
+    { moveSpeed: 60 },
     { kind: 'targetsDestroyed', count: 3 },
     [
       {
@@ -556,6 +569,7 @@ const bosses: Tuning['bosses'] = {
     'c8.boss.pruitt2',
     'boss',
     [30, 14],
+    { moveSpeed: 60 },
     { kind: 'healthBelow', fraction: 0.4 },
     [
       {
@@ -582,7 +596,7 @@ const bosses: Tuning['bosses'] = {
     ],
     340,
   ),
-  'c9.setpiece.lockdown': boss('c9.setpiece.lockdown', 'setpiece', [50, 30], { kind: 'reachExit' }, [
+  'c9.setpiece.lockdown': boss('c9.setpiece.lockdown', 'setpiece', [50, 30], { moveSpeed: 0 }, { kind: 'reachExit' }, [
     {
       id: 'doors',
       trigger: { kind: 'start' },
@@ -596,6 +610,7 @@ const bosses: Tuning['bosses'] = {
     'c10.boss.administrator',
     'boss',
     [36, 20],
+    { moveSpeed: 45 },
     beaten,
     [
       {
@@ -668,6 +683,7 @@ const fights: Tuning['fights'] = Object.fromEntries([
 // ---------------------------------------------------------------------------
 
 export const TUNING: Tuning = {
+  audioDefaults: { musicVolume: 0.7, effectsVolume: 0.8 },
   buzz: {
     max: 100,
     thresholds: { grand: 20, locked: 60, banjaxed: 90 },
@@ -693,6 +709,37 @@ export const TUNING: Tuning = {
     sneakNoiseRadius: 0,
     drinkSlotCap: 3,
     maxEmpties: 12,
+    bodyWidth: 10,
+    bodyHeight: 8,
+    hurtInvulnerableMs: 500,
+    stumbleDashMs: 220,
+    swayPeriodMs: 1700,
+    driftPeriodMs: 2300,
+    deathRespawnDelayMs: 1200,
+    soberRemarkMinMsAbove: 20000,
+  },
+  combat: {
+    knockbackDecayPerSecond: 7,
+    chargeSpeed: 260,
+    burstIntervalMs: 160,
+    characterHitRadius: 6,
+    lobSplashRadius: 14,
+    lobPeakHeight: 24,
+    projectileRadius: 3,
+    aggroRange: 400,
+    disguiseRevealRange: 40,
+    backOffMs: 700,
+    separationRadius: 14,
+    flankOffset: 40,
+    rangedPreferredFraction: 0.6,
+    betweenWavesMs: 900,
+    repathMs: 500,
+    bottleStunMs: 0,
+  },
+  world: {
+    checkpointRadius: 16,
+    pushHoldMs: 180,
+    pushSlideMs: 160,
   },
   stealth: {
     detectionFillMs: 1000,
@@ -700,6 +747,11 @@ export const TUNING: Tuning = {
     investigateGiveUpMs: 4000,
     actNaturalStillMs: 600,
     seatedVisionMultiplier: 0.6,
+    turnDegPerSecond: 240,
+    lookAroundMs: 1500,
+    lockedSneakNoiseFactor: 1,
+    footstepIntervalMs: 350,
+    patrolSpeedFraction: 0.7,
   },
   heat: {
     max: 100,
@@ -716,6 +768,12 @@ export const TUNING: Tuning = {
     idleCommentMs: 45000,
     ohioTangentShare: 0.66,
     followDistance: 22,
+    walkSpeed: 78,
+    strollSpeed: 60,
+    commentCooldownMs: 12000,
+    drinkCommentChance: 0.35,
+    heatWarnFraction: 0.75,
+    tangentChance: 0.5,
   },
   investigation: {
     interactRadius: 20,
