@@ -52,7 +52,7 @@ export class DeductionScene extends Phaser.Scene {
       return;
     }
     this.sel = new LinkSelection(board.candidateIds);
-    makeLabel(this, 240, 10, text('ui.deduction.title'), 'bone', { anchor: 'centre' });
+    makeLabel(this, 240, 10, text(hasText(`${board.id}.prompt`) ? `${board.id}.prompt` : 'ui.deduction.title'), 'bone', { anchor: 'centre' });
     makeLabel(this, 240, 24, text('ui.deduction.instruction'), 'fog', { anchor: 'centre' });
     board.candidateIds.forEach((id, i) => {
       const col = i % 2;

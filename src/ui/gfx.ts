@@ -166,9 +166,9 @@ export const PORTRAIT_FALLBACK: Readonly<Record<SpeakerId, ColourName>> = {
   narrator: 'ink',
 };
 
-/** Speaker name colours, docs/style-guide.md section 5. */
+/** Speaker name colours on the dark dialogue box (Myko's beanie is too dark there). */
 export function speakerColour(speaker: SpeakerId): ColourName {
   if (speaker === 'andrew') return 'anorak';
-  if (speaker === 'myko') return 'beanie';
+  if (speaker === 'myko') return 'motelPinkShade';
   return 'fog';
 }

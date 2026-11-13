@@ -10,6 +10,7 @@ import { THEMES } from '../../audio/themes';
 import { makeNoiseBuffer, renderEffect } from '../../audio/synth';
 import type { EffectId } from '../../audio';
 import { PALETTE } from '../../art/palette';
+import { registerArt } from '../../art';
 import type { EvidenceId, RegionId } from '../../core/types';
 import { createUiScenes, hideTutorialPrompt, showTutorialPrompt, UiSceneKeys } from '..';
 import { FakeSource } from './fakeSource';
@@ -19,6 +20,7 @@ class WorldScene extends Phaser.Scene {
     super('DevWorld');
   }
   create(): void {
+    registerArt(this);
     this.add.rectangle(0, 0, 480, 270, PALETTE.moss).setOrigin(0, 0);
     for (let x = 0; x < 480; x += 16) for (let y = 0; y < 270; y += 16) {
       if ((x / 16 + y / 16) % 2 === 0) this.add.rectangle(x, y, 16, 16, PALETTE.mossDark).setOrigin(0, 0);
@@ -78,21 +80,21 @@ const dev = {
   },
   fillCasebook(): void {
     source.entries = [
-      { kind: 'evidence', evidenceId: ev('c2.clue.fragment'), chapter: 2 },
-      { kind: 'evidence', evidenceId: ev('c2.clue.tracks'), chapter: 2 },
-      { kind: 'evidence', evidenceId: ev('c2.clue.ledger'), chapter: 2 },
-      { kind: 'lead', deductionId: 'c2.deduction.office', chapter: 2 },
+      { kind: 'evidence', evidenceId: ev('c3.clue.map'), chapter: 3 },
+      { kind: 'evidence', evidenceId: ev('c3.clue.brochure'), chapter: 3 },
+      { kind: 'evidence', evidenceId: ev('c3.clue.manifest'), chapter: 3 },
+      { kind: 'lead', deductionId: 'c3.deduction.boston', chapter: 3 },
       { kind: 'mykoCall', sectionId: 'c3.fight.bay', callKind: 'fight', chapter: 3 },
     ];
   },
   openBoard(): void {
     source.board = {
-      id: 'c2.deduction.office',
-      chapter: 2,
-      candidateIds: ['c2.clue.fragment', 'c2.clue.tracks', 'c2.clue.ledger', 'c2.clue.sheep', 'c2.clue.poitin'].map(ev),
-      solution: [ev('c2.clue.fragment'), ev('c2.clue.tracks'), ev('c2.clue.ledger')],
-      leadTextId: 'dev.deduction.lead',
-      leadMarginTextId: 'dev.deduction.leadMargin',
+      id: 'c3.deduction.boston',
+      chapter: 3,
+      candidateIds: ['c3.clue.map', 'c3.clue.brochure', 'c3.clue.certificate', 'c3.clue.visitors', 'c3.clue.manifest'].map(ev),
+      solution: [ev('c3.clue.map'), ev('c3.clue.brochure'), ev('c3.clue.manifest')],
+      leadTextId: 'c3.deduction.boston.lead.body',
+      leadMarginTextId: 'c3.deduction.boston.lead.margin',
       wrongAnswerDialogueIds: ['dev.box.myko'],
     };
   },

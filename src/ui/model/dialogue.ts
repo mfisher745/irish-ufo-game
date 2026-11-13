@@ -18,7 +18,7 @@ export interface DialogueDeps {
   speakerName(line: DialogueLine): string | null;
   onFinished(id: DialogueId): void;
   /** Called once per non-space character as it is revealed. */
-  onChar?(speaker: SpeakerId): void;
+  onChar?(line: DialogueLine): void;
   onError?(id: DialogueId, error: unknown): void;
 }
 
@@ -140,7 +140,7 @@ export class DialogueQueue {
     const flat = page.lines.join('');
     for (let i = from; i < to; i++) {
       const c = flat[i];
-      if (c !== undefined && c !== ' ') this.deps.onChar(page.line.speaker);
+      if (c !== undefined && c !== ' ') this.deps.onChar(page.line);
     }
   }
 

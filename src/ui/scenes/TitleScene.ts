@@ -11,11 +11,14 @@ import type { UiShared } from '../shared';
 import { Menu } from '../widgets';
 import type { MenuItem } from '../widgets';
 
+const CHAPTERS: readonly ChapterNumber[] = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+
 type View = 'main' | 'confirm' | 'chapters';
 
 export class TitleScene extends Phaser.Scene {
   private menu: Menu | null = null;
   private extras: Phaser.GameObjects.GameObject[] = [];
+  private stars: Phaser.GameObjects.Rectangle[] = [];
 
   constructor(private readonly shared: UiShared) {
     super(UiSceneKeys.Title);
@@ -28,7 +31,7 @@ export class TitleScene extends Phaser.Scene {
     for (let i = 0; i < 48; i++) {
       const x = (i * 97 + 13) % SCREEN.width;
       const y = (i * 53 + 7) % 110;
-      rect(this, x, y, 1, 1, i % 5 === 0 ? 'amberLight' : 'steel');
+      this.stars.push(rect(this, x, y, 1, 1, i % 5 === 0 ? 'amberLight' : 'steel'));
     }
     const title = makeLabel(this, SCREEN.width / 2, 44, text('ui.title'), 'amberLight', { anchor: 'centre' });
     title.setScale(3);
@@ -46,6 +49,7 @@ export class TitleScene extends Phaser.Scene {
 
   private show(view: View): void {
     this.clear();
+    for (const star of this.stars) star.setVisible(view !== 'chapters');
     const { source, hooks } = this.shared;
     const save = source.save();
     const w = 180;
@@ -60,11 +64,12 @@ export class TitleScene extends Phaser.Scene {
         { kind: 'button', label: () => text('ui.menu.yes'), onSelect: () => source.newGame() },
       ];
     } else if (view === 'chapters') {
-      const done = [...(save?.finishedChapters ?? [])].sort((a, b) => a - b);
-      y = 96;
-      items = done.map<MenuItem>((n: ChapterNumber) => ({
+      const done = new Set<number>(save?.finishedChapters ?? []);
+      y = 40;
+      items = CHAPTERS.map<MenuItem>((n) => ({
         kind: 'button',
-        label: () => format('ui.chapter.label', { n }),
+        label: () => (done.has(n) ? format('ui.chapter.label', { n }) : `${format('ui.chapter.label', { n })}  ${text('ui.chapter.locked')}`),
+        enabled: () => done.has(n),
         onSelect: () => source.startChapter(n),
       }));
       items.push({ kind: 'button', label: () => text('ui.menu.back'), onSelect: () => this.show('main') });
@@ -79,7 +84,7 @@ export class TitleScene extends Phaser.Scene {
       items.push({
         kind: 'button',
         label: () => text('ui.menu.chapterSelect'),
-        enabled: () => (save?.finishedChapters.length ?? 0) > 0,
+        enabled: () => save !== null,
         onSelect: () => this.show('chapters'),
       });
       items.push({

@@ -1,11 +1,8 @@
 /**
- * Casebook grouping and text-ID conventions. Plain TypeScript.
- *
- * The UI contract does not carry a clue registry, so entry text is found by ID
- * convention (to be confirmed by the creative director):
- *   evidence  `<evidenceId>.title`, `<evidenceId>.body`, `<evidenceId>.margin`
- *   lead      `<deductionId>.lead`, `<deductionId>.lead.margin`
- *   mykoCall  `c<chapter>.call.<fight|puzzle>.casebook`, `...casebook.margin`
+ * Casebook grouping and text-ID conventions (docs/style-guide.md section 6).
+ *   evidence  `<evidenceId>.title|body|margin`
+ *   lead      `<deductionId>.lead.title|body|margin`
+ *   mykoCall  `c<chapter>.call.<fight|puzzle>.casebook|margin`, title `ui.casebook.callTitle`
  * An ID that does not exist is treated as absent and nothing is drawn for it.
  */
 
@@ -47,8 +44,8 @@ export function toItem(entry: CasebookEntry): CasebookItem {
         key: `l:${entry.deductionId}`,
         tab: 'leads',
         chapter: entry.chapter,
-        titleId: null,
-        bodyId: `${entry.deductionId}.lead`,
+        titleId: `${entry.deductionId}.lead.title`,
+        bodyId: `${entry.deductionId}.lead.body`,
         marginId: `${entry.deductionId}.lead.margin`,
       };
     case 'mykoCall':
@@ -56,9 +53,9 @@ export function toItem(entry: CasebookEntry): CasebookItem {
         key: `m:${entry.sectionId}`,
         tab: 'clues',
         chapter: entry.chapter,
-        titleId: null,
+        titleId: 'ui.casebook.callTitle',
         bodyId: `c${entry.chapter}.call.${entry.callKind}.casebook`,
-        marginId: `c${entry.chapter}.call.${entry.callKind}.casebook.margin`,
+        marginId: `c${entry.chapter}.call.${entry.callKind}.margin`,
       };
   }
 }

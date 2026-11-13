@@ -13,6 +13,7 @@ import { PALETTE } from '../../art/palette';
 import type { ColourName } from '../../art/palette';
 import { TUNING } from '../../content/tuning';
 import { format, sequence, text } from '../../content/dialogue';
+import { isAlienLine } from '../../content/dialogue/speakers';
 import { GameEvents } from '../../core/types';
 import type { DialogueLine, SpeakerId, TextId } from '../../core/types';
 import type { EffectId } from '../../audio';
@@ -121,7 +122,7 @@ export class HudScene extends Phaser.Scene {
       lookup: (id) => sequence(id),
       speakerName: (line) => this.speakerName(line),
       onFinished: (id) => source.dialogueFinished(id),
-      onChar: (speaker) => this.shared.hooks.play?.(blipFor(speaker)),
+      onChar: (line) => this.shared.hooks.play?.(blipFor(line)),
       onError: (id, error) => console.error(`Dialogue ${id} failed`, error),
     });
 
@@ -505,15 +506,9 @@ export class HudScene extends Phaser.Scene {
 }
 
 /** Effect ID for a speaker's dialogue blip. docs/style-guide.md section 7. */
-export function blipFor(speaker: SpeakerId): EffectId {
-  switch (speaker) {
-    case 'andrew':
-      return 'blipAndrew';
-    case 'myko':
-      return 'blipMyko';
-    case 'administrator':
-      return 'blipAlien';
-    default:
-      return 'blipOther';
-  }
+export function blipFor(line: DialogueLine): EffectId {
+  if (isAlienLine(line)) return 'blipAlien';
+  if (line.speaker === 'andrew') return 'blipAndrew';
+  if (line.speaker === 'myko') return 'blipMyko';
+  return 'blipOther';
 }
