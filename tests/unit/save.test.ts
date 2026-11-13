@@ -6,12 +6,12 @@ import { clearChapterRegistry, registerChapter } from '../../src/core/chapter';
 import { createSandboxModule } from '../../src/core/sandbox';
 import { AUDIO_KEY, MemoryStorage, SAVE_KEY, SaveStore, isSaveState } from '../../src/core/save';
 import { SAVE_VERSION } from '../../src/core/types';
-import type { SaveState } from '../../src/core/types';
+import type { ChapterNumber, SaveState } from '../../src/core/types';
 import { GameSession, carryOver, chapterOf, chapterSelectSave, emptyProgress, saveAtChapterStart } from '../../src/systems/session';
 import type { SceneDriver } from '../../src/systems/session';
 import { NO_INPUT, advance, record } from './helpers';
 
-const fresh = (chapter = 1 as const): SaveState => saveAtChapterStart(createSandboxModule(chapter), emptyProgress());
+const fresh = (chapter: ChapterNumber = 1): SaveState => saveAtChapterStart(createSandboxModule(chapter), emptyProgress());
 
 describe('SaveStore', () => {
   it('round-trips a save exactly', () => {
@@ -160,7 +160,7 @@ describe('Chapter Select start state (README)', () => {
     const existing: SaveState = { ...fresh(), mykoCallsLeft: 1, player: { ...fresh().player, health: 10, buzz: 80, hangover: { active: true } } };
     const s = chapterSelectSave(createSandboxModule(5), existing, []);
     expect(s.chapter).toBe(5);
-    expect(s.player.unlockedAbilities.sort()).toEqual(['bottleThrow', 'punchCombo', 'stoutSlam', 'stumble']);
+    expect([...s.player.unlockedAbilities].sort()).toEqual(['bottleThrow', 'punchCombo', 'stoutSlam', 'stumble']);
     expect(s.player.drinkSlots).toEqual([{ drinkId: 'stout', count: 3 }, null, null]);
     expect(s.player.hangover.active).toBe(false);
     expect(s.player.health).toBe(TUNING.player.maxHealth);

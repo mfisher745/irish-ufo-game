@@ -12,6 +12,7 @@ import { createSandboxModule } from '../../src/core/sandbox';
 import type { ChapterModule } from '../../src/core/chapter';
 import type {
   AbilityId,
+  GameEventBus,
   GameEventName,
   GameEventPayloads,
   InputAction,
@@ -29,7 +30,7 @@ import { emptyProgress, saveAtChapterStart } from '../../src/systems/session';
 export { NO_INPUT };
 
 /** Records every payload of the listed events, in order. */
-export function record<K extends GameEventName>(bus: EventBus, event: K): GameEventPayloads[K][] {
+export function record<K extends GameEventName>(bus: GameEventBus, event: K): GameEventPayloads[K][] {
   const seen: GameEventPayloads[K][] = [];
   bus.on(event, (p) => {
     seen.push(p);
