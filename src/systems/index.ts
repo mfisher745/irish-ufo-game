@@ -1,5 +1,6 @@
 /**
- * Public API of the systems. Chapters, UI and tests import from here only.
+ * Public API of the systems. Chapters, UI and tests import { TUNING } from '../content/tuning';
+import from here only.
  * DESIGN.md section 10: "A chapter never reaches into a system's internals;
  * it uses the public API in src/systems/index.ts."
  */
@@ -54,7 +55,6 @@ export { GameSession, createUiState, carryOver, chapterSelectSave, saveAtChapter
 export type { SceneDriver, UiState } from './session';
 export { TILE, gridFromAscii, tileCentre, tileOf, lineOfSight, findPath } from './grid';
 export { shapeHits, shieldBlocks, knockbackVector, scaledDamage } from './combat';
-export { PENDING_TUNING } from './pendingTuning';
 
 /** The one game session. */
 export const session = new GameSession({ fallbackModule: createSandboxModule });

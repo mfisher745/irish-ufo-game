@@ -86,7 +86,6 @@ import { Casebook, DeductionBoard, PuzzleBase } from './investigation';
 import { applyConsumable, isAlcoholic, wouldHaveEffect } from './inventory';
 import { Myko } from './myko';
 import type { CallTarget, MykoHost } from './myko';
-import { PENDING_TUNING } from './pendingTuning';
 import { Player } from './player';
 import { deflect, projectileTouches, spawnProjectile, stepProjectile } from './projectiles';
 import type { Projectile, ProjectileSpawn } from './projectiles';
@@ -403,7 +402,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     p.move(dtMs, live, this.grid, (c, r) => this.extraBlocked(c, r));
     const heatDamage = p.heat.tick(dtMs, { inShade: isShade(this.grid, p.pos), running: p.moving && !p.sneaking });
     p.drain(heatDamage);
-    if (p.heat.active && p.heat.fraction() >= PENDING_TUNING.myko.heatWarnFraction) this.myko.comment('heat', 'myko.heat');
+    if (p.heat.active && p.heat.fraction() >= TUNING.myko.heatWarnFraction) this.myko.comment('heat', 'myko.heat');
     this.trackSober(dtMs);
 
     this.handleInventoryInput(live);
@@ -422,7 +421,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     // Footsteps.
     this.footstepMs -= dtMs;
     if (p.moving && this.footstepMs <= 0) {
-      this.footstepMs = PENDING_TUNING.stealth.footstepIntervalMs;
+      this.footstepMs = TUNING.stealth.footstepIntervalMs;
       const radius = p.footstepNoiseRadius();
       if (radius > 0) this.emitNoise({ kind: p.sneaking ? 'sneakFootstep' : 'footstep', position: p.pos, radius });
     }
@@ -456,7 +455,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     this.myko.update(dtMs, this.deduction?.isOpen === true ? lockedInput(input) : input, { combatOrStealth: combat, inputActive });
 
     if (p.dead && this.deathTimer < 0) {
-      this.deathTimer = PENDING_TUNING.player.deathRespawnDelayMs;
+      this.deathTimer = TUNING.player.deathRespawnDelayMs;
       this.bus.emit(GameEvents.PlayerDied, { checkpointId: this.checkpointId });
     }
   }
@@ -1042,7 +1041,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       if (!id) return;
       applyConsumable(TUNING.drinks[id].effects, this.player);
       if (this.player.heat.active && isAlcoholic(id)) this.myko.comment('heat', 'myko.heat.wrongDrink', true);
-      else if (this.player.buzz.banjaxedPhase === 'none') this.myko.maybeComment('drink', 'myko.drink', PENDING_TUNING.myko.drinkCommentChance);
+      else if (this.player.buzz.banjaxedPhase === 'none') this.myko.maybeComment('drink', 'myko.drink', TUNING.myko.drinkCommentChance);
     }
   }
 
@@ -1053,7 +1052,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   private resolveAction(a: AbilityAction, input: InputFrame): void {
     const p = this.player;
     const fx = p.effects();
-    const r = PENDING_TUNING.combat.characterHitRadius;
+    const r = TUNING.combat.characterHitRadius;
     const source = { kind: 'player' as const, abilityId: a.abilityId };
     switch (a.kind) {
       case 'dodge':
@@ -1108,7 +1107,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   private alarmGuardsHit(shape: AttackShape, angle: number): void {
     for (const { runner } of this.stealthHere()) {
       if (!runner.active) continue;
-      if (runner.guards.some((g) => shapeHits(shape, this.player.pos, angle, g.pos, PENDING_TUNING.combat.characterHitRadius))) runner.alarm();
+      if (runner.guards.some((g) => shapeHits(shape, this.player.pos, angle, g.pos, TUNING.combat.characterHitRadius))) runner.alarm();
     }
   }
 
@@ -1136,7 +1135,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     for (const proj of this.projectileList) {
       if (proj.done || proj.owner !== 'enemy' || !proj.shape.deflectable) continue;
       const reach = TUNING.abilities.hurley.shape.kind === 'arc' ? TUNING.abilities.hurley.shape.range : 0;
-      if (distance(proj.pos, p.pos) <= reach + PENDING_TUNING.combat.projectileRadius) {
+      if (distance(proj.pos, p.pos) <= reach + TUNING.combat.projectileRadius) {
         deflect(proj, p.aimDeg, { kind: 'player', abilityId: 'hurley' });
         this.opts.playEffect?.('deflect');
       }
@@ -1144,7 +1143,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   }
 
   private tickProjectiles(dtMs: number): void {
-    const r = PENDING_TUNING.combat.characterHitRadius;
+    const r = TUNING.combat.characterHitRadius;
     const p = this.player;
     for (const proj of this.projectileList) {
       if (proj.done) continue;
@@ -1178,7 +1177,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
         }
       }
       if (landedNow) {
-        this.fx.push({ kind: 'impact', pos: proj.pos, angleDeg: 0, radius: PENDING_TUNING.combat.lobSplashRadius, arcDeg: 0, ttlMs: 200 });
+        this.fx.push({ kind: 'impact', pos: proj.pos, angleDeg: 0, radius: TUNING.combat.lobSplashRadius, arcDeg: 0, ttlMs: 200 });
         if (proj.shape.impactNoiseRadius > 0) this.emitNoise({ kind: proj.frame === 'bottle' ? 'bottle' : 'other', position: proj.pos, radius: proj.shape.impactNoiseRadius });
       }
     }
@@ -1292,7 +1291,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       }
     }
     for (const cp of this.module.def.checkpoints) {
-      if (cp.screenId === this.screen.id && !this.reachedCheckpoints.has(cp.id) && distance(cp.position, pos) <= PENDING_TUNING.world.checkpointRadius) {
+      if (cp.screenId === this.screen.id && !this.reachedCheckpoints.has(cp.id) && distance(cp.position, pos) <= TUNING.world.checkpointRadius) {
         this.reachCheckpoint(cp.id);
       }
     }
@@ -1318,7 +1317,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       if (phase === 'fallen') this.myko.comment('drink', 'myko.banjaxed', true);
     });
     this.scope.on(GameEvents.BuzzStateChanged, ({ from, to }) => {
-      if (to === 'sober' && buzzStateRank(from) > 0 && this.msSinceGrandOrAbove >= PENDING_TUNING.player.soberRemarkMinMsAbove) {
+      if (to === 'sober' && buzzStateRank(from) > 0 && this.msSinceGrandOrAbove >= TUNING.player.soberRemarkMinMsAbove) {
         const line = this.opts.pool('andrew.sober');
         const pickIdx = Math.floor(this.rng.next() * line.length);
         const id = line[pickIdx];

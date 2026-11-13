@@ -9,6 +9,7 @@
  * Frontal shields, flying, disguise, grabs and bursts come from the def.
  */
 
+import { TUNING } from '../content/tuning';
 import type {
   AttackDef,
   DamageSource,
@@ -26,7 +27,6 @@ import type { Random } from '../core/random';
 import { decayVelocity, knockbackVector, shapeHits, shapeReach, shieldBlocks } from './combat';
 import { add, angleTo, distance, fromAngle, normalize, scale, sub, turnToward } from './geometry';
 import { findPath, isBlocked, moveBox, tileOf, walkableLine } from './grid';
-import { PENDING_TUNING } from './pendingTuning';
 import type { ProjectileSpawn } from './projectiles';
 
 /** What an enemy needs from the world. Implemented by `World`. */
@@ -203,7 +203,7 @@ export class EnemyActor {
     // Knockback slide.
     if (this.kb.x !== 0 || this.kb.y !== 0) {
       this.moveBy(scale(this.kb, dtMs / 1000), world);
-      this.kb = decayVelocity(this.kb, PENDING_TUNING.combat.knockbackDecayPerSecond, dtMs);
+      this.kb = decayVelocity(this.kb, TUNING.combat.knockbackDecayPerSecond, dtMs);
       if (this.status === 'knockedBack' && this.kb.x === 0 && this.kb.y === 0) this.status = 'normal';
     } else if (this.status === 'knockedBack') this.status = 'normal';
 
@@ -239,12 +239,12 @@ export class EnemyActor {
     }
 
     if (this.disguised) {
-      if (targetable && dist <= PENDING_TUNING.combat.disguiseRevealRange) this.reveal(world);
+      if (targetable && dist <= TUNING.combat.disguiseRevealRange) this.reveal(world);
       else return;
     }
-    if (!targetable || dist > PENDING_TUNING.combat.aggroRange) return;
+    if (!targetable || dist > TUNING.combat.aggroRange) return;
 
-    this.facingDeg = turnToward(this.facingDeg, angleTo(this.pos, player), PENDING_TUNING.stealth.turnDegPerSecond * (dtMs / 1000) * 2);
+    this.facingDeg = turnToward(this.facingDeg, angleTo(this.pos, player), TUNING.stealth.turnDegPerSecond * (dtMs / 1000) * 2);
 
     const chosen = this.backOffMs > 0 ? null : this.chooseAttack(dist, world);
     if (chosen) {
@@ -266,7 +266,7 @@ export class EnemyActor {
   }
 
   private chooseAttack(dist: number, world: CombatWorld): AttackDef | null {
-    const r = PENDING_TUNING.combat.characterHitRadius;
+    const r = TUNING.combat.characterHitRadius;
     const player = world.playerPosition();
     const usable = this.attacks.filter((a) => {
       if (this.cooldowns.has(a.id)) return false;
@@ -304,13 +304,13 @@ export class EnemyActor {
       return;
     }
     if (a.shape.kind === 'charge') {
-      const step = (PENDING_TUNING.combat.chargeSpeed * dtMs) / 1000;
+      const step = (TUNING.combat.chargeSpeed * dtMs) / 1000;
       const dir = fromAngle(this.attackDir);
       const before = this.pos;
       const res = this.moveBy(scale(dir, step), world);
       this.chargeTravelled += step;
       if (!this.landedThisAttack && world.playerTargetable()) {
-        const half = a.shape.width / 2 + PENDING_TUNING.combat.characterHitRadius;
+        const half = a.shape.width / 2 + TUNING.combat.characterHitRadius;
         if (distance(this.pos, world.playerPosition()) <= half) this.landOn(a, world, before);
       }
       if (res.blocked) {
@@ -337,7 +337,7 @@ export class EnemyActor {
         holdMs: a.holdMs ?? 0,
         frame: projectileFrame(a.id),
       });
-    } else if (world.playerTargetable() && shapeHits(a.shape, this.pos, this.attackDir, world.playerPosition(), PENDING_TUNING.combat.characterHitRadius)) {
+    } else if (world.playerTargetable() && shapeHits(a.shape, this.pos, this.attackDir, world.playerPosition(), TUNING.combat.characterHitRadius)) {
       this.landOn(a, world, this.pos);
     }
     this.finishBurstShot(a);
@@ -346,7 +346,7 @@ export class EnemyActor {
   private finishBurstShot(a: AttackDef): void {
     this.burstLeft -= 1;
     if (this.burstLeft > 0) {
-      this.burstTimer = PENDING_TUNING.combat.burstIntervalMs;
+      this.burstTimer = TUNING.combat.burstIntervalMs;
       this.chargeTravelled = 0;
       this.landedThisAttack = false;
       return;
@@ -354,7 +354,7 @@ export class EnemyActor {
     this.cooldowns.set(a.id, a.cooldownMs / this.attackSpeedMultiplier);
     this.status = 'recovering';
     this.statusMs = a.recoveryMs;
-    if (this.landedThisAttack && this.enemyId && BEHAVIOUR[this.enemyId]?.backOffAfterHit) this.backOffMs = PENDING_TUNING.combat.backOffMs;
+    if (this.landedThisAttack && this.enemyId && BEHAVIOUR[this.enemyId]?.backOffAfterHit) this.backOffMs = TUNING.combat.backOffMs;
     this.current = null;
   }
 
@@ -385,7 +385,7 @@ export class EnemyActor {
       goal = add(this.pos, scale(normalize(sub(this.pos, player)), 32));
       wantDist = 0;
     } else if (ranged) {
-      const preferred = shapeReach(ranged.shape) * PENDING_TUNING.combat.rangedPreferredFraction;
+      const preferred = shapeReach(ranged.shape) * TUNING.combat.rangedPreferredFraction;
       const meleeReach = melee ? shapeReach(melee.shape) : 0;
       if (!melee || dist > meleeReach * 3) wantDist = preferred;
       if (dist < wantDist * 0.7) {
@@ -395,7 +395,7 @@ export class EnemyActor {
     }
     if (this.enemyId && BEHAVIOUR[this.enemyId]?.flank && dist > 48 && this.backOffMs === 0) {
       const toPlayer = normalize(sub(player, this.pos));
-      goal = add(player, scale({ x: -toPlayer.y, y: toPlayer.x }, PENDING_TUNING.combat.flankOffset * this.flankSign));
+      goal = add(player, scale({ x: -toPlayer.y, y: toPlayer.x }, TUNING.combat.flankOffset * this.flankSign));
     }
     if (wantDist > 0 && dist <= wantDist) return;
 
@@ -407,14 +407,14 @@ export class EnemyActor {
       this.repathMs -= dtMs;
       if (this.repathMs <= 0 || this.path.length === 0) {
         this.path = findPath(world.grid, this.pos, goal, (c, r) => isBlocked(world.grid, c, r) || world.extraBlocked(c, r), 600) ?? [];
-        this.repathMs = PENDING_TUNING.combat.repathMs;
+        this.repathMs = TUNING.combat.repathMs;
       }
       const next = this.path[0];
       if (next && distance(next, this.pos) < 4) this.path.shift();
       step = next ? normalize(sub(next, this.pos)) : { x: 0, y: 0 };
     }
     // Separation from other actors.
-    const sep = PENDING_TUNING.combat.separationRadius;
+    const sep = TUNING.combat.separationRadius;
     let push: Vec2 = { x: 0, y: 0 };
     for (const other of world.actors()) {
       if (other === this || other.down) continue;
@@ -433,7 +433,7 @@ export class EnemyActor {
       this.pos = { x: nx, y: ny };
       return { blocked: false };
     }
-    const size = PENDING_TUNING.player.bodyWidth;
+    const size = TUNING.player.bodyWidth;
     const res = moveBox(world.grid, this.pos, size, size, delta, (c, r) => world.extraBlocked(c, r));
     this.pos = res.position;
     return { blocked: (res.blockedX && delta.x !== 0) || (res.blockedY && delta.y !== 0) };

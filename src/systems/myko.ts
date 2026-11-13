@@ -34,7 +34,6 @@ import type { Random } from '../core/random';
 import { pickAvoiding } from '../core/random';
 import type { EnemyActor } from './enemies';
 import { distance, normalize, scale, sub, add } from './geometry';
-import { PENDING_TUNING } from './pendingTuning';
 
 /** The section Myko would be called into, as the world sees it. */
 export interface CallTarget {
@@ -154,7 +153,7 @@ export class Myko {
     const line = pickAvoiding(this.host.rng, this.host.pool(poolId), this.lastLine);
     if (!line) return false;
     this.lastLine = line;
-    this.commentCooldown = PENDING_TUNING.myko.commentCooldownMs;
+    this.commentCooldown = TUNING.myko.commentCooldownMs;
     this.host.play(line);
     this.host.bus.emit(GameEvents.MykoComment, { trigger, dialogueId: line });
     return true;
@@ -249,7 +248,7 @@ export class Myko {
     // Stroll toward the next one standing.
     const next = c.victims.find((v) => !v.down);
     if (next) {
-      const step = (PENDING_TUNING.myko.strollSpeed * dtMs) / 1000;
+      const step = (TUNING.myko.strollSpeed * dtMs) / 1000;
       const d = distance(this.pos, next.pos);
       if (d > 1) this.pos = add(this.pos, scale(normalize(sub(next.pos, this.pos)), Math.min(step, d)));
     }
@@ -281,7 +280,7 @@ export class Myko {
     const pools = this.host.tangentPools();
     const chapter = this.host.chapter();
     if (pools.ohio || pools.other) {
-      const wantsTangent = this.host.rng.next() < PENDING_TUNING.myko.tangentChance;
+      const wantsTangent = this.host.rng.next() < TUNING.myko.tangentChance;
       if (wantsTangent) {
         const ohio = chapter >= 7 ? this.host.rng.next() < TUNING.myko.ohioTangentShare : chapter === 6;
         const poolId = (ohio ? pools.ohio : pools.other) ?? pools.ohio ?? pools.other;
@@ -296,7 +295,7 @@ export class Myko {
     const d = distance(this.pos, goal);
     const slack = this.mode === 'following' ? TUNING.myko.followDistance / 2 : 1;
     if (d <= slack) return;
-    const step = Math.min(d - slack, (PENDING_TUNING.myko.walkSpeed * dtMs) / 1000);
+    const step = Math.min(d - slack, (TUNING.myko.walkSpeed * dtMs) / 1000);
     this.pos = add(this.pos, scale(normalize(sub(goal, this.pos)), step));
   }
 

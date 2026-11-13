@@ -29,7 +29,6 @@ import { angleOf, facingFromAngle, fromAngle, normalize, scale, sub, toRad } fro
 import { moveBox } from './grid';
 import type { ConsumableTarget } from './inventory';
 import { Inventory } from './inventory';
-import { PENDING_TUNING } from './pendingTuning';
 
 export class Player implements ConsumableTarget {
   readonly instanceId = 'andrew';
@@ -148,13 +147,13 @@ export class Player implements ConsumableTarget {
     // Aim with sway (Locked and above, tequila, full heat; tea steadies).
     const rawAim = angleOf(sub(input.aim, this.pos));
     const swayAmp = Math.max(fx.aimSwayDeg, heatSway) * this.timed.swayMultiplier();
-    const sway = swayAmp * Math.sin((this.clockMs / PENDING_TUNING.player.swayPeriodMs) * Math.PI * 2);
+    const sway = swayAmp * Math.sin((this.clockMs / TUNING.player.swayPeriodMs) * Math.PI * 2);
     this.aimDeg = rawAim + sway;
     const aimDist = Math.hypot(input.aim.x - this.pos.x, input.aim.y - this.pos.y);
     this.aimPoint = { x: this.pos.x + Math.cos(toRad(this.aimDeg)) * aimDist, y: this.pos.y + Math.sin(toRad(this.aimDeg)) * aimDist };
 
-    const w = PENDING_TUNING.player.bodyWidth;
-    const h = PENDING_TUNING.player.bodyHeight;
+    const w = TUNING.player.bodyWidth;
+    const h = TUNING.player.bodyHeight;
     let delta: Vec2 = { x: 0, y: 0 };
     this.sneaking = input.held.has('sneak');
 
@@ -169,7 +168,7 @@ export class Player implements ConsumableTarget {
         if (this.sneaking) speed *= TUNING.player.sneakSpeedMultiplier;
         let v = scale(dir, speed);
         if (fx.movementDrift > 0) {
-          const driftAngle = (this.clockMs / PENDING_TUNING.player.driftPeriodMs) * 360;
+          const driftAngle = (this.clockMs / TUNING.player.driftPeriodMs) * 360;
           v = { x: v.x + fromAngle(driftAngle).x * fx.movementDrift * speed, y: v.y + fromAngle(driftAngle).y * fx.movementDrift * speed };
         }
         delta = scale(v, dtMs / 1000);
@@ -178,7 +177,7 @@ export class Player implements ConsumableTarget {
     }
     if (this.kb.x !== 0 || this.kb.y !== 0) {
       delta = { x: delta.x + (this.kb.x * dtMs) / 1000, y: delta.y + (this.kb.y * dtMs) / 1000 };
-      this.kb = decayVelocity(this.kb, PENDING_TUNING.combat.knockbackDecayPerSecond, dtMs);
+      this.kb = decayVelocity(this.kb, TUNING.combat.knockbackDecayPerSecond, dtMs);
     }
     const before = this.pos;
     const res = moveBox(grid, this.pos, w, h, delta, extraBlocked);
@@ -198,7 +197,7 @@ export class Player implements ConsumableTarget {
   startDodge(dashDistance: number, invulnerableMs: number, dirHint: Vec2): void {
     let dir = normalize(dirHint);
     if (dir.x === 0 && dir.y === 0) dir = fromAngle(this.aimDeg);
-    const ms = PENDING_TUNING.player.stumbleDashMs;
+    const ms = TUNING.player.stumbleDashMs;
     this.dashMs = ms;
     this.dashVel = scale(dir, (dashDistance / ms) * 1000);
     this.invulnMs = Math.max(this.invulnMs, invulnerableMs);
@@ -213,7 +212,7 @@ export class Player implements ConsumableTarget {
     this.kb = scale(hit.knockback, 1 - fx.knockbackResistance);
     if (hit.holdMs > 0) this.heldMs = hit.holdMs;
     if (hit.stunMs > 0) this.stunMs = hit.stunMs;
-    this.invulnMs = PENDING_TUNING.player.hurtInvulnerableMs;
+    this.invulnMs = TUNING.player.hurtInvulnerableMs;
     this.bus.emit(GameEvents.PlayerDamaged, { hit, health: this.health });
     if (this.hp <= 0) this.dead = true;
     return true;
@@ -268,7 +267,7 @@ export class Player implements ConsumableTarget {
     const fx = this.effects();
     const base = TUNING.player.footstepNoiseRadius;
     if (this.sneaking) {
-      const loud = Math.max(0, fx.footstepNoiseMultiplier - 1) * base * PENDING_TUNING.stealth.lockedSneakNoiseFactor;
+      const loud = Math.max(0, fx.footstepNoiseMultiplier - 1) * base * TUNING.stealth.lockedSneakNoiseFactor;
       return Math.max(TUNING.player.sneakNoiseRadius, loud);
     }
     return base * fx.footstepNoiseMultiplier;
