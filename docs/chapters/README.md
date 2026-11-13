@@ -44,6 +44,7 @@ Bosses and set pieces are described in their chapter.
 ## Carry-over rules
 
 - Abilities, empties, drinks in hand, casebook and Myko calls carry from chapter to chapter.
+- Buzz does not carry. Every chapter starts at 0; the journey between chapters sobers Andrew up, and the hangover is what he keeps.
 - The hangover rule applies from the end of chapter 3 onward. Chapter 4 always starts with a hangover regardless of Buzz (they drank on the plane). Chapters 1 to 3 never start with one, so the tutorial does not punish drinking before it has been explained.
 - A Myko call saves on the spot. If Andrew dies after one, he comes back where he stood when he called, not at the earlier checkpoint.
 - Chapter Select starts a chapter with the abilities it expects, three stout, no hangover and the save's current Myko calls.

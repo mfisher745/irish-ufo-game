@@ -96,10 +96,10 @@ export const SHARED_COLOURS = [
 ] as const satisfies readonly ColourName[];
 
 /**
- * The colours that set each region's look, most dominant first. Environment
- * art for a region uses these plus SHARED_COLOURS. A colour from another
- * region may appear only on an object that has travelled (Andrew's pint in
- * Boston is still amber).
+ * The colours that set each region's look, most dominant first. They should
+ * cover most of the screen in that region. This is a guide to dominance, not
+ * a whitelist: any palette colour may appear in a region in small amounts
+ * (an amber door strip, a blue vending machine, a pint that has travelled).
  */
 export const REGION_COLOURS = {
   kilnamoe: ['slate', 'moss', 'turf', 'amber', 'mossDark', 'grass', 'turfDark', 'peat', 'amberLight'],
