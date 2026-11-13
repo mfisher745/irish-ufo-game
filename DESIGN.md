@@ -4,7 +4,7 @@ Owner: `creative-director`. Every other agent builds against this document and d
 
 ## 1. Summary
 
-A comedic top-down action-adventure for PC browsers, played with mouse and keyboard. Andrew, a drinker from a small Irish town, is sure that aliens are real. Over ten chapters he follows the evidence from a bog in County Leitrim across the United States to a base in the Nevada desert. He is right about everything. He proves it to the whole world, and the world does not care. His best mate Myko does.
+A comedic top-down action-adventure for PC browsers, played with mouse and keyboard. Andrew, a drinker from a small Irish town with a chip on his shoulder, is sure that aliens are real and surer still that proving it will finally show everyone. Over ten chapters he follows the evidence from a bog in County Leitrim across the United States to a base in the Nevada desert. He is right about everything. He proves it to the whole world, and the world does not care. His best mate Myko does.
 
 - Length: 10 chapters of about 6 minutes each, about one hour in total.
 - Play per chapter: a mix of investigation, a puzzle, stealth and combat.
@@ -48,15 +48,24 @@ Voice samples. These set the register; they are not required lines.
 > **Myko:** *(quietly)* You don't.
 > **Andrew:** It's quicker.
 
+> **Myko:** Look at that. A car park you could land a plane in, and it's free. They just let you have it.
+> **Andrew:** It's a car park.
+> **Myko:** It's Ohio, Andrew.
+
+> *After calling Myko in:*
+> **Myko:** No, you'd them well softened up. I could tell by the way they were all still standing.
+
 > *Pickup text:* **American light beer.** Buzz +2. Andrew isn't angry. He's just disappointed.
 
 ## 3. Characters
 
 ### Andrew (player character)
 
-- 36, from Kilnamoe, County Leitrim (a fictional town). On the dole. Three-time winner of the Feeney's table quiz, which he mentions.
-- Short and slightly round, in a worn green-grey anorak, jeans and runners. He has stubble and tired eyes.
+- 38, from Kilnamoe, County Leitrim (a fictional town). On the dole. Three-time winner of the Feeney's table quiz, which he mentions.
+- Short and slight. He is noticeably shorter than Myko and he is not pudgy. He wears a worn green-grey anorak, jeans and runners, and has stubble and tired eyes.
+- He has a chip on his shoulder. He wants to prove himself to the world, and it does not matter how. Aliens are what turned up. If it had been a record-breaking turnip he would have gone after that with the same face.
 - He believes in aliens with complete, calm certainty. He is polite, stubborn and hopeless with money, and he is braver than he should be once he has had a few.
+- He never says any of this out loud. It shows in what he mentions (the table quiz), in who he brings up without being asked (people from school who "did well"), and in how much he hates asking Myko for help.
 - He speaks in short sentences. He never explains himself more than once.
 
 ### Myko (sidekick and narrator)
@@ -67,7 +76,9 @@ Voice samples. These set the register; they are not required lines.
 - He drinks, but he prefers to smoke cannabis. He is usually mildly stoned, which is shown by a rolled cigarette, slow blinks and the odd tangent. It is never shown as a how-to and it is never a power-up.
 - His commentary does most of the narration. A narrator caption appears only for chapter titles and location cards.
 - He sometimes offers an idea or a hint. Some of his ideas are good.
-- He does not fight. His position on this: "I'm here in an advisory capacity."
+- He does not fight unless Andrew asks him to. His position on this: "I'm here in an advisory capacity." When he is asked, he is immediately and effortlessly better at everything than Andrew is, and he never explains how (see 7.5).
+- He loves Ohio. Nothing prepares the player for this and he gives no reason. For all of chapter 6 he marvels at it: the width of the roads, the motel ice machine, the size of the sky, the manners. It is sincere, with no sarcasm in it at all, and it is the only thing besides the ending that he is sincere about. Andrew does not see it and Myko pities him for that.
+- From chapter 7 onwards, most of his tangents are about Ohio. Roswell, Nevada and an alien base are all compared with it and found wanting.
 - At the end he is the only person in the world who is excited by what Andrew found.
 
 ### Supporting cast
@@ -89,7 +100,7 @@ Myko pays for two flights. In America the trail runs west: a freight contractor 
 
 Andrew gathers proof, gets into the base, beats the Administrator and broadcasts everything to every screen on Earth. The broadcast works. Governments confirm it within the hour. It is the third item on the news, after the weather. His video gets 41 views. Back in Feeney's, Dympna says "Aliens, is it? Fair play," and asks if it's the same again.
 
-Myko drops the act for the first time in the game. He is delighted. He has slagged Andrew for twenty years and Andrew was right, and he wants to hear every detail again from the start. That is the ending: one person cared, and it was the right one.
+Myko drops the act about Andrew for the first time in the game. Until now he has only been sincere about Ohio. He is delighted. He has slagged Andrew for twenty years and Andrew was right, and he wants to hear every detail again from the start. Andrew set out to prove himself to the world and the world did not look up. That is the ending: one person cared, and it was the right one. Myko's last tangent is that they should tell them about this in Ohio.
 
 ## 5. Chapters
 
@@ -102,7 +113,7 @@ Each chapter has an investigation beat, a puzzle or deduction, a stealth section
 | 3 | Regional Office | Meridian depot on the edge of town | Break in, find the shipping manifest, solve the loading-bay crate puzzle. | **The Stumble** (dodge), first deduction board | Mr Halloran and his forklift |
 | 4 | Southie | Boston: airport, an "Irish" bar, the docks | First hangover. Americans explain Ireland to Andrew. Find the freight contractor. | Hangover, American drinks, **Stout Slam** | Bar brawl, then the dock foreman |
 | 5 | The Paper Trail | Washington DC: a federal records office | The stealth chapter. A redacted-file puzzle. Agents appear in numbers. | **Act Natural** (blend in), agents | Agent Pruitt, round one, in the archive stacks |
-| 6 | Flyover Country | Ohio: a bus station, a motel, cornfields | Crop circles as a maze puzzle. Surveillance drones. Andrew acquires a hurley from a bewildered sporting goods shop. | **Hurley** (melee upgrade), drones | The combine harvester |
+| 6 | Flyover Country | Ohio: a bus station, a motel, cornfields | Crop circles as a maze puzzle. Surveillance drones. Andrew acquires a hurley from a bewildered sporting goods shop. Myko is having the best week of his life and says so throughout. | **Hurley** (melee upgrade), drones | The combine harvester |
 | 7 | Gift Shop | Roswell, New Mexico | Everyone is dressed as an alien. Some of them are aliens. Work out which. | Aliens in disguise, **Sliotar Strike** (charged shot) | Three "mascots" who are not mascots |
 | 8 | The Long Road | Nevada desert, the perimeter | Sensors, patrol trucks and heat. Water matters as much as drink. | **Poitín Breath**, heat and sensor stealth | Agent Pruitt, round two. He lets them through and retires. |
 | 9 | Level Minus Four | Inside the base | Alien technology, gravity-switch puzzles and the last five pieces of proof. | **The Borrowed Glove** (alien stun gadget), alien enemies | The containment hall lockdown |
@@ -125,6 +136,7 @@ Locations are small. Each chapter uses two or three connected screens, and no ch
 | Shift | Sneak (hold) |
 | E | Interact, talk, examine |
 | H | Ask Myko for a hint |
+| M (hold for 1 second) | Call Myko in (three uses per game) |
 | Tab | Casebook |
 | Esc | Pause |
 
@@ -197,15 +209,26 @@ Death returns the player to the last checkpoint with a line from Myko. Checkpoin
 
 ### 7.5 Myko
 
-- He walks behind Andrew outside combat and stealth. During those he waits at the entrance and talks by phone.
+- He walks behind Andrew outside combat and stealth. During those he waits at the entrance and talks by phone, unless he is called in.
 - He cannot be hurt and never needs protecting.
 - H asks for a hint about the current objective. The first hint is a nudge, the second is the answer, and both arrive wrapped in an insult.
 - He comments without being asked on clues, drinks, deaths, hangovers and long periods of the player doing nothing.
 - Commentary must never block play. Lines appear in a box at the bottom of the screen and play continues, except in scripted scenes.
+- In chapter 6 his unprompted commentary is mostly admiration for Ohio. From chapter 7 on, about two in three of his tangents are about Ohio.
+
+**Calling Myko in**
+
+- Holding M asks Myko to finish the current fight or puzzle. Andrew has **three calls for the whole game**. They do not refill, and the number left is stored in the save.
+- It works on any combat encounter, any boss or finale set piece, any physical puzzle and any deduction board. It does not work on stealth sections that have not turned into a fight, and it does not work on the Administrator. Andrew does that one himself.
+- Myko always succeeds, at once and without effort. In a fight he strolls in from the entrance, still smoking, and every enemy is down within about three seconds. He does it with one hand, or with whatever he happened to be holding, and he does not break stride. In a puzzle he glances at it and solves it in one move. How he can do any of this is never explained, and nobody asks.
+- Afterwards he gives Andrew a good-natured hard time about it. The slagging is warm, and it is the fondest he sounds before the ending. Each chapter has its own lines for a fight call and a puzzle call.
+- A call costs Andrew nothing except his pride. The encounter counts as complete and gives its normal rewards. It is recorded in the casebook in Andrew's words, briefly and inaccurately ("Myko helped a bit"), with Myko's correction in the margin.
+- The call is spent the moment it is used and the game saves immediately, so reloading does not give it back.
+- If the player finishes the game with all three calls unused, Myko remarks on it in the epilogue. He is nearly impressed.
 
 ### 7.6 Saving
 
-Progress saves automatically to the browser's local storage at each checkpoint. The title screen offers Continue, New Game and Chapter Select for finished chapters.
+Progress saves automatically to the browser's local storage at each checkpoint, and whenever a Myko call is used. The title screen offers Continue, New Game and Chapter Select for finished chapters.
 
 ## 8. Art direction
 
@@ -226,7 +249,8 @@ Progress saves automatically to the browser's local storage at each checkpoint. 
 | Nevada, the base | Heat outside, cold inside | Sand, rust, then teal and violet |
 
 - The aliens are small, grey and neatly dressed. They look like people who work in an office, because they do.
-- HUD: health, Buzz meter with its four states marked, empties count, selected drink, current ability. Dialogue box with a 32 × 32 portrait.
+- Andrew's sprite is short and slight, not round. Myko's is tall and thin.
+- HUD: health, Buzz meter with its four states marked, empties count, selected drink, current ability, and Myko calls left (three small rollie icons). Dialogue box with a 32 × 32 portrait.
 - A pixel bitmap font, generated in code.
 
 ## 9. Audio
@@ -258,7 +282,7 @@ All sound is synthesised with Web Audio. One short looping theme per region and 
 
 ### Rules that keep parallel work compatible
 
-- `src/core/types.ts` is written first and defines the contracts: `ChapterDef`, `EnemyDef`, `AbilityDef`, `DrinkDef`, `DialogueLine`, `Clue`, `SaveState` and the event names. Only systems-dev changes it, with the creative director's approval.
+- `src/core/types.ts` is written first and defines the contracts: `ChapterDef`, `EnemyDef`, `AbilityDef`, `DrinkDef`, `DialogueLine`, `Clue`, `SaveState` (including Myko calls left) and the event names. Every fight and puzzle exposes one `completeNow()` entry point, which the Myko call and the QA playthrough both use. Only systems-dev changes it, with the creative director's approval.
 - Chapters are data plus small scripts. A chapter never reaches into a system's internals; it uses the public API in `src/systems/index.ts`.
 - No balance number is written anywhere except `tuning.ts`.
 - No text shown to the player is written anywhere except `src/content/dialogue/`.
