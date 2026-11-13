@@ -573,6 +573,8 @@ export interface BossPhaseDef {
   readonly trigger: BossPhaseTrigger;
   readonly attacks: readonly AttackDef[];
   readonly attackSpeedMultiplier: number;
+  /** Walking pace in this phase; absent keeps `BossDef.moveSpeed`. */
+  readonly moveSpeed?: number;
 }
 
 /** A boss or set piece. Defined in `src/content/tuning.ts` under its section ID. docs/chapters, "Boss" sections. */
@@ -587,6 +589,15 @@ export interface BossDef {
   readonly end: BossEndCondition;
   /** Arena size in tiles. */
   readonly arenaTiles: { readonly width: number; readonly height: number };
+  /**
+   * Walking pace of the bodies (pixels per second). A phase's `moveSpeed`
+   * overrides it, and a body placement's `moveSpeed` overrides both. 0 stands still.
+   */
+  readonly moveSpeed: number;
+  /** How long `BossRunner.daze()` stuns a body, for bosses that can be dazed (Big Tom into the tractor). */
+  readonly dazedMs?: number;
+  /** Damage-taken multiplier while dazed. */
+  readonly dazedDamageMultiplier?: number;
 }
 
 /** One wave of a fight. docs/chapters, "Beats". */

@@ -27,7 +27,10 @@ export interface BossBodyPlacement {
   readonly stationary?: boolean;
   /** Attacks this body uses: 'phase' (default) takes the current phase's attacks; a list overrides; 'none' never attacks. */
   readonly attacks?: 'phase' | 'none' | readonly AttackDef[];
+  /** Overrides the boss's and the phase's `moveSpeed` for this body. */
   readonly moveSpeed?: number;
+  /** Texture for this body (the mascots: `boss.c7.boss.mascots.zip`); default `BossDef.spriteKey`. */
+  readonly spriteKey?: string;
   readonly knockbackResistance?: number;
   readonly frontalShieldDeg?: number;
   readonly flies?: boolean;
@@ -119,12 +122,22 @@ export class BossRunner extends CompletableSection {
     return this.targets.filter((t) => !t.down).length;
   }
 
-  /** Big Tom into the tractor: stunned, takes extra damage until he recovers. */
-  daze(tag: string, ms: number, damageTakenMultiplier: number): void {
+  /**
+   * Big Tom into the tractor: stunned, takes extra damage until he recovers.
+   * `ms` and the multiplier default to `BossDef.dazedMs` / `dazedDamageMultiplier`.
+   * The actor puts the multiplier back to 1 when the stun ends.
+   */
+  daze(tag: string, ms: number = this.def.dazedMs ?? 0, damageTakenMultiplier: number = this.def.dazedDamageMultiplier ?? 1): void {
     const b = this.body(tag);
-    if (!b) return;
+    if (!b || b.down || ms <= 0) return;
     b.stun(ms);
     b.damageTakenMultiplier = damageTakenMultiplier;
+  }
+
+  /** Swaps the texture the view draws for a body (Big Tom's `.jacketOff`). */
+  setSprite(tag: string, textureKey: string): void {
+    const b = this.body(tag);
+    if (b) b.spriteKey = textureKey;
   }
 
   /** Summons a roster enemy owned by this boss (the foreman's dockers). */
@@ -155,17 +168,16 @@ export class BossRunner extends CompletableSection {
       const maxHealth = p.invulnerable ? 1 : Math.max(1, Math.round((this.targetMax * (p.healthShare ?? 1)) / totalShare));
       const stats: ActorStats = {
         maxHealth,
-        moveSpeed: p.moveSpeed ?? 0,
+        moveSpeed: this.speedFor(p, this.def.phases[0]),
         knockbackResistance: p.knockbackResistance ?? 1,
         flies: p.flies ?? false,
         attacks: [],
         ...(p.frontalShieldDeg === undefined ? {} : { frontalShieldDeg: p.frontalShieldDeg }),
-        spriteKey: this.def.spriteKey,
+        spriteKey: p.spriteKey ?? this.def.spriteKey,
       };
       const actor = this.world.spawnBossBody(this.def.id, stats, p.position);
       actor.tag = p.tag;
       actor.invulnerable = p.invulnerable === true;
-      actor.stationary = p.stationary === true || (p.moveSpeed ?? 0) === 0;
       actor.onChargeBlocked = (a, c, r) => this.hooks.onChargeBlocked?.(this, a, c, r);
       actor.onAttackLanded = (a, atk) => this.hooks.onAttackLanded?.(this, a, atk);
       this.bodyList.push(actor);
@@ -206,6 +218,10 @@ export class BossRunner extends CompletableSection {
   private stopEveryone(): void {
     for (const b of this.bodyList) b.frozen = true;
     for (const a of this.adds) if (!a.down) this.world.defeat(a, 'player');
+  }
+
+  private speedFor(p: BossBodyPlacement, ph: BossPhaseDef | undefined): number {
+    return p.moveSpeed ?? ph?.moveSpeed ?? this.def.moveSpeed;
   }
 
   private triggered(ph: BossPhaseDef): boolean {
@@ -251,6 +267,8 @@ export class BossRunner extends CompletableSection {
       const attacks = p.attacks ?? 'phase';
       actor.attacks = attacks === 'phase' ? ph.attacks : attacks === 'none' ? [] : attacks;
       actor.attackSpeedMultiplier = ph.attackSpeedMultiplier;
+      actor.moveSpeed = this.speedFor(p, ph);
+      actor.stationary = p.stationary === true || actor.moveSpeed === 0;
     });
     this.world.bus.emit(GameEvents.BossPhaseChanged, { bossId: this.def.id, phaseId: ph.id });
     this.hooks.onPhaseChanged?.(this, ph);

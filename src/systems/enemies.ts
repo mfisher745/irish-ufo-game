@@ -105,6 +105,10 @@ export class EnemyActor {
   onAttackLanded: ((actor: EnemyActor, attack: AttackDef) => void) | null = null;
   /** Optional tag for chapter scripts (e.g. 'zip', 'light1'). */
   tag = '';
+  /** Walking pace; starts at `stats.moveSpeed`, bosses change it per phase. */
+  moveSpeed: number;
+  /** Texture key the view draws; starts at `stats.spriteKey` (`BossRunner.setSprite` swaps it). */
+  spriteKey: string;
 
   private statusMs = 0;
   private kb: Vec2 = { x: 0, y: 0 };
@@ -131,6 +135,8 @@ export class EnemyActor {
     this.pos = pos;
     this.health = stats.maxHealth;
     this.attacks = stats.attacks;
+    this.moveSpeed = stats.moveSpeed;
+    this.spriteKey = stats.spriteKey;
     this.disguised = stats.disguisedUntilAttack === true;
     this.flankSign = rng.next() < 0.5 ? -1 : 1;
   }
@@ -344,6 +350,14 @@ export class EnemyActor {
   }
 
   private finishBurstShot(a: AttackDef): void {
+    // A hook during the attack (onChargeBlocked -> BossRunner.daze, onAttackLanded) may have
+    // stunned or downed the actor: the attack ends there and must not overwrite that status.
+    if (this.status !== 'attacking') {
+      this.cooldowns.set(a.id, a.cooldownMs / this.attackSpeedMultiplier);
+      this.burstLeft = 0;
+      this.current = null;
+      return;
+    }
     this.burstLeft -= 1;
     if (this.burstLeft > 0) {
       this.burstTimer = TUNING.combat.burstIntervalMs;
@@ -422,7 +436,7 @@ export class EnemyActor {
       if (d > 0 && d < sep) push = add(push, scale(normalize(sub(this.pos, other.pos)), (sep - d) / sep));
     }
     const dir = normalize(add(step, push));
-    this.moveBy(scale(dir, (this.stats.moveSpeed * dtMs) / 1000), world);
+    this.moveBy(scale(dir, (this.moveSpeed * dtMs) / 1000), world);
   }
 
   private moveBy(delta: Vec2, world: CombatWorld): { blocked: boolean } {
