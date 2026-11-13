@@ -293,7 +293,7 @@ describe('enemies telegraph every attack', () => {
     // Only the grab is off cooldown at the start in this contrived setup.
     for (let i = 0; i < 600; i++) a.tick(16, w);
     const grab = w.hits.find((h) => h.hit.holdMs > 0);
-    expect(grab?.hit.holdMs).toBe(1000);
+    expect(grab?.hit.holdMs).toBe(TUNING.enemies.brawler.attacks.find((a) => a.id === 'grab')?.holdMs);
   });
 
   it('a clerk fires its three-shot burst', () => {

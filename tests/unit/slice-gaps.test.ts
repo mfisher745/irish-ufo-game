@@ -181,7 +181,8 @@ describe('BossRunner moveSpeed, daze and setSprite', () => {
     const r = new BossRunner(def, [{ tag: 'bigtom', position: T(5, 5) }], w, host(), null);
     r.start();
     const b = r.body('bigtom')!;
-    b.health = Math.floor(b.health * 0.4);
+    const t = bigTom.phases[1]?.trigger;
+    b.health = Math.floor(b.stats.maxHealth * (t?.kind === 'healthBelow' ? t.fraction : 0.5) * 0.8);
     r.tick(16);
     expect(r.phase?.id).toBe('jacketOff');
     expect(b.moveSpeed).toBe(70);
@@ -193,15 +194,15 @@ describe('BossRunner moveSpeed, daze and setSprite', () => {
   });
 
   it('daze() defaults to the def: stunned for dazedMs at dazedDamageMultiplier, then back to 1', () => {
-    expect(bigTom.dazedMs).toBe(2000);
-    expect(bigTom.dazedDamageMultiplier).toBe(2);
+    expect(bigTom.dazedMs).toBeGreaterThan(0);
+    expect(bigTom.dazedDamageMultiplier).toBeGreaterThan(1);
     const { w } = bossWorld(new EventBus());
     const r = new BossRunner(bigTom, [{ tag: 'bigtom', position: T(5, 5) }], w, host(), null);
     r.start();
     r.daze('bigtom');
     const b = r.body('bigtom')!;
     expect(b.status).toBe('stunned');
-    expect(b.damageTakenMultiplier).toBe(2);
+    expect(b.damageTakenMultiplier).toBe(bigTom.dazedDamageMultiplier);
   });
 
   it('setSprite swaps the texture key; a placement can set one per body', () => {
