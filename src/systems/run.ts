@@ -437,7 +437,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     // Sections.
     for (const f of this.fights.values()) f.tick(dtMs);
     for (const b of this.bosses.values()) b.tick(dtMs);
-    const hidden = actingNatural(this.hidingPropsHere(), p.pos, p.stillMs, p.abilities.has('actNatural'));
+    const hidden = actingNatural(this.hidingPropsHere(), p.pos, p.stillMs, p.abilities.usable('actNatural'));
     for (const { runner, placement } of this.stealthHere()) {
       if (!placement) continue;
       if (!runner.isFinished && !runner.alarmRaised && rectContains(placement.startArea, p.pos)) this.startStealth(runner);
@@ -1021,9 +1021,10 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       if (p.screenId === id && !this.collected.has(p.id)) this.pickupsLive.set(p.id, { def: p, item: p.item });
     }
     this.player.pos = spawn;
-    this.myko.pos = layout.mykoStart && spawn === layout.playerStart ? layout.mykoStart : { x: spawn.x - TUNING.myko.followDistance, y: spawn.y };
-    // Areas Andrew spawns inside do not fire until he leaves and re-enters.
-    for (const t of this.module.triggers) if (t.screenId === id && rectContains(t.area, spawn)) this.insideTriggers.add(t.id);
+    // Value comparison: a spawn read back from a save on Continue is a copy, not the layout's object.
+    const atStart = spawn.x === layout.playerStart.x && spawn.y === layout.playerStart.y;
+    this.myko.pos = layout.mykoStart && atStart ? layout.mykoStart : { x: spawn.x - TUNING.myko.followDistance, y: spawn.y };
+    // Areas Andrew spawns inside fire on the next tick (insideTriggers was cleared above).
     const region = this.module.def.screens.find((s) => s.id === id)?.region;
     if (region) this.bus.emit(GameEvents.ScreenEntered, { screenId: id, region });
     this.script?.onScreenEntered?.(id);
