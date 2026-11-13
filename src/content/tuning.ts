@@ -687,7 +687,6 @@ export const TUNING: Tuning = {
   player: {
     maxHealth: 100,
     // There is no separate walk. WASD moves at runSpeed; Shift sneaks.
-    walkSpeed: 80,
     runSpeed: 80,
     sneakSpeedMultiplier: 0.5,
     footstepNoiseRadius: 56,
