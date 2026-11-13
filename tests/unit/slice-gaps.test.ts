@@ -12,7 +12,7 @@ import { NO_INPUT } from '../../src/core/input';
 import { seededRandom } from '../../src/core/random';
 import { createSandboxModule } from '../../src/core/sandbox';
 import type { ChapterModule, MeleeHitInfo, ScreenLayout } from '../../src/core/chapter';
-import type { AttackDef, BossDef, BossId, GameEventBus, HitInfo, SaveState, TileGrid, Vec2 } from '../../src/core/types';
+import type { AttackDef, BossDef, BossId, GameEventBus, SaveState, TileGrid, Vec2 } from '../../src/core/types';
 import { BossRunner } from '../../src/systems/boss';
 import type { BossWorld } from '../../src/systems/boss';
 import { shapeHitsRect } from '../../src/systems/combat';
@@ -236,7 +236,7 @@ describe('A charge dazed by onChargeBlocked stays dazed (enemies.ts finishBurstS
       screenId: 'c1.test',
       playerPosition: () => T(6, 3),
       playerTargetable: () => true,
-      hitPlayer: (_h: Omit<HitInfo, 'targetInstanceId'>) => false,
+      hitPlayer: () => false,
       spawnProjectile: () => undefined,
       extraBlocked: () => false,
       actors: () => [actor],
