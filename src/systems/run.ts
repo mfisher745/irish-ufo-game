@@ -18,7 +18,9 @@ import type {
   ChapterModule,
   ChapterScript,
   FightPlacement,
+  MeleeHitInfo,
   PushPuzzlePlacement,
+  ScreenAmbient,
   ScreenLayout,
   ScriptedCompletableHandle,
   StealthControl,
@@ -44,6 +46,7 @@ import type {
   EnemyId,
   EvidenceId,
   ExaminableDef,
+  Facing,
   FightDef,
   FightSectionId,
   GameEventBus,
@@ -73,9 +76,11 @@ import type {
 import { SAVE_VERSION } from '../core/types';
 import type { AbilityAction } from './abilities';
 import { BossRunner } from './boss';
-import { knockbackVector, scaledDamage, shapeHits } from './combat';
+import { knockbackVector, scaledDamage, shapeHits, shapeHitsRect } from './combat';
 import { buzzStateRank } from './buzz';
 import { DialogueRunner } from './dialogue';
+import { Dressing } from './dressing';
+import type { InteractPoint } from './dressing';
 import type { DialogueLookup } from './dialogue';
 import { EnemyActor, statsFromDef } from './enemies';
 import type { ActorStats, CombatWorld } from './enemies';
@@ -86,7 +91,6 @@ import { Casebook, DeductionBoard, PuzzleBase } from './investigation';
 import { applyConsumable, isAlcoholic, wouldHaveEffect } from './inventory';
 import { Myko } from './myko';
 import type { CallTarget, MykoHost } from './myko';
-import { PENDING_TUNING } from './pendingTuning';
 import { Player } from './player';
 import { deflect, projectileTouches, spawnProjectile, stepProjectile } from './projectiles';
 import type { Projectile, ProjectileSpawn } from './projectiles';
@@ -153,6 +157,8 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   readonly dialogue: DialogueRunner;
   readonly casebook: Casebook;
   readonly sectionHost: SectionHost = this;
+  /** Props, NPCs and ambience of every screen (run-time state, not saved). */
+  readonly dressing: Dressing;
 
   // Progress (persisted)
   private readonly completed: Set<SectionId>;
@@ -189,6 +195,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   private clock = 0;
   private footstepMs = 0;
   private defeatedEmitted = new Set<string>();
+  private meleeHooks: { readonly area: AreaRect; readonly screenId: ScreenId; readonly callback: (hit: MeleeHitInfo) => void }[] = [];
 
   // State
   private objectiveId: ObjectiveId | null = null;
@@ -223,6 +230,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     this.dialogue = new DialogueRunner(this.bus, opts.dialogue);
     this.casebook = new Casebook(this.bus, save.casebook);
     this.myko = new Myko(this.mykoHost());
+    this.dressing = new Dressing(this.module.screens);
 
     const screen = this.layout(save.respawn.screenId) ?? this.layout(this.module.def.startScreenId) ?? this.module.screens[0];
     if (!screen) throw new Error(`Chapter ${this.chapter} has no screens`);
@@ -260,8 +268,9 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     return this.screen;
   }
 
+  /** The current screen's grid with solid props and NPCs merged in. */
   get grid(): TileGrid {
-    return this.screen.grid;
+    return this.dressing.gridFor(this.screen);
   }
 
   get screenId(): ScreenId {
@@ -293,8 +302,30 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     return [...this.pickupsLive.values()];
   }
 
+  /** Examinables drawn as markers: those not owned by an NPC. */
   examinablesHere(): readonly ExaminableDef[] {
-    return this.module.examinables.filter((e) => e.screenId === this.screen.id);
+    const owned = this.dressing.npcExaminableIds();
+    return this.module.examinables.filter((e) => e.screenId === this.screen.id && !owned.has(e.id));
+  }
+
+  /** What E would examine or talk to right now, if anything (for prompts). */
+  interactTarget(): InteractPoint | null {
+    const p = this.player.pos;
+    let best: InteractPoint | null = null;
+    let bestD = TUNING.investigation.interactRadius;
+    for (const e of this.dressing.interactPoints(this.screen.id, this.module.examinables)) {
+      const d = distance(e.position, p);
+      if (d <= bestD) {
+        best = e;
+        bestD = d;
+      }
+    }
+    return best;
+  }
+
+  /** The current screen's ambience after script changes. */
+  ambient(): ScreenAmbient | null {
+    return this.dressing.ambient(this.screen.id);
   }
 
   guardsHere(): readonly Guard[] {
@@ -365,6 +396,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   }
 
   dispose(): void {
+    this.meleeHooks = [];
     this.script.dispose?.();
     this.scope.dispose();
     this.dialogue.clear();
@@ -403,7 +435,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     p.move(dtMs, live, this.grid, (c, r) => this.extraBlocked(c, r));
     const heatDamage = p.heat.tick(dtMs, { inShade: isShade(this.grid, p.pos), running: p.moving && !p.sneaking });
     p.drain(heatDamage);
-    if (p.heat.active && p.heat.fraction() >= PENDING_TUNING.myko.heatWarnFraction) this.myko.comment('heat', 'myko.heat');
+    if (p.heat.active && p.heat.fraction() >= TUNING.myko.heatWarnFraction) this.myko.comment('heat', 'myko.heat');
     this.trackSober(dtMs);
 
     this.handleInventoryInput(live);
@@ -422,7 +454,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     // Footsteps.
     this.footstepMs -= dtMs;
     if (p.moving && this.footstepMs <= 0) {
-      this.footstepMs = PENDING_TUNING.stealth.footstepIntervalMs;
+      this.footstepMs = TUNING.stealth.footstepIntervalMs;
       const radius = p.footstepNoiseRadius();
       if (radius > 0) this.emitNoise({ kind: p.sneaking ? 'sneakFootstep' : 'footstep', position: p.pos, radius });
     }
@@ -437,7 +469,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     // Sections.
     for (const f of this.fights.values()) f.tick(dtMs);
     for (const b of this.bosses.values()) b.tick(dtMs);
-    const hidden = actingNatural(this.hidingPropsHere(), p.pos, p.stillMs, p.abilities.has('actNatural'));
+    const hidden = actingNatural(this.hidingPropsHere(), p.pos, p.stillMs, p.abilities.usable('actNatural'));
     for (const { runner, placement } of this.stealthHere()) {
       if (!placement) continue;
       if (!runner.isFinished && !runner.alarmRaised && rectContains(placement.startArea, p.pos)) this.startStealth(runner);
@@ -456,7 +488,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     this.myko.update(dtMs, this.deduction?.isOpen === true ? lockedInput(input) : input, { combatOrStealth: combat, inputActive });
 
     if (p.dead && this.deathTimer < 0) {
-      this.deathTimer = PENDING_TUNING.player.deathRespawnDelayMs;
+      this.deathTimer = TUNING.player.deathRespawnDelayMs;
       this.bus.emit(GameEvents.PlayerDied, { checkpointId: this.checkpointId });
     }
   }
@@ -745,6 +777,42 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     this.pickupsLive.delete(id);
   }
 
+  setPropVisible(id: string, visible: boolean): void {
+    this.dressing.setPropVisible(id, visible);
+  }
+
+  setPropFrame(id: string, frame: string, frames?: readonly string[]): void {
+    this.dressing.setPropFrame(id, frame, frames);
+  }
+
+  setPropTile(id: string, col: number, row: number): void {
+    this.dressing.setPropTile(id, col, row);
+  }
+
+  setNpcPosition(id: string, pos: Vec2): void {
+    this.dressing.setNpcPosition(id, pos);
+  }
+
+  setNpcFacing(id: string, facing: Facing): void {
+    this.dressing.setNpcFacing(id, facing);
+  }
+
+  setNpcVisible(id: string, visible: boolean): void {
+    this.dressing.setNpcVisible(id, visible);
+  }
+
+  setAmbient(ambient: ScreenAmbient | null, screenId: ScreenId = this.screen.id): void {
+    this.dressing.setAmbient(screenId, ambient);
+  }
+
+  onMeleeHit(area: AreaRect, callback: (hit: MeleeHitInfo) => void, screenId: ScreenId = this.screen.id): () => void {
+    const hook = { area, screenId, callback };
+    this.meleeHooks.push(hook);
+    return () => {
+      this.meleeHooks = this.meleeHooks.filter((h) => h !== hook);
+    };
+  }
+
   completeChapter(): void {
     if (this.ended) return;
     this.ended = true;
@@ -812,8 +880,9 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     for (const f of m.fights) this.addFight(f);
     for (const b of m.bosses) this.addBoss(b);
     for (const p of m.pushPuzzles ?? []) {
-      const grid = this.layout(p.screenId)?.grid;
-      if (!grid) continue;
+      const layout = this.layout(p.screenId);
+      if (!layout) continue;
+      const grid = this.dressing.gridFor(layout);
       const puzzle = new PushPuzzle(m.def.puzzle.id === p.sectionId ? m.def.puzzle : { id: p.sectionId, chapter: this.chapter, kind: 'push' }, p.layout, grid, this, this.bus, this.sectionReward(p.sectionId));
       if (this.completed.has(p.sectionId)) puzzle.restoreComplete();
       puzzle.onPush = () => this.opts.playEffect?.('push');
@@ -895,7 +964,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   private stealthHost(placement: StealthPlacement | null): StealthHost {
     return {
       bus: this.bus,
-      getGrid: () => this.screen.grid,
+      getGrid: () => this.grid,
       raiseAlarm: (_sectionId, fightId, guards) => this.raiseAlarm(fightId, guards, placement),
       cleanRun: (def) => this.cleanRun(def),
     };
@@ -1021,9 +1090,10 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       if (p.screenId === id && !this.collected.has(p.id)) this.pickupsLive.set(p.id, { def: p, item: p.item });
     }
     this.player.pos = spawn;
-    this.myko.pos = layout.mykoStart && spawn === layout.playerStart ? layout.mykoStart : { x: spawn.x - TUNING.myko.followDistance, y: spawn.y };
-    // Areas Andrew spawns inside do not fire until he leaves and re-enters.
-    for (const t of this.module.triggers) if (t.screenId === id && rectContains(t.area, spawn)) this.insideTriggers.add(t.id);
+    // Value comparison: a spawn read back from a save on Continue is a copy, not the layout's object.
+    const atStart = spawn.x === layout.playerStart.x && spawn.y === layout.playerStart.y;
+    this.myko.pos = layout.mykoStart && atStart ? layout.mykoStart : { x: spawn.x - TUNING.myko.followDistance, y: spawn.y };
+    // Areas Andrew spawns inside fire on the next tick (insideTriggers was cleared above).
     const region = this.module.def.screens.find((s) => s.id === id)?.region;
     if (region) this.bus.emit(GameEvents.ScreenEntered, { screenId: id, region });
     this.script?.onScreenEntered?.(id);
@@ -1041,7 +1111,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       if (!id) return;
       applyConsumable(TUNING.drinks[id].effects, this.player);
       if (this.player.heat.active && isAlcoholic(id)) this.myko.comment('heat', 'myko.heat.wrongDrink', true);
-      else if (this.player.buzz.banjaxedPhase === 'none') this.myko.maybeComment('drink', 'myko.drink', PENDING_TUNING.myko.drinkCommentChance);
+      else if (this.player.buzz.banjaxedPhase === 'none') this.myko.maybeComment('drink', 'myko.drink', TUNING.myko.drinkCommentChance);
     }
   }
 
@@ -1052,7 +1122,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   private resolveAction(a: AbilityAction, input: InputFrame): void {
     const p = this.player;
     const fx = p.effects();
-    const r = PENDING_TUNING.combat.characterHitRadius;
+    const r = TUNING.combat.characterHitRadius;
     const source = { kind: 'player' as const, abilityId: a.abilityId };
     switch (a.kind) {
       case 'dodge':
@@ -1070,6 +1140,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
         }
         this.alarmGuardsHit(a.shape, p.aimDeg);
         if (a.deflectWindowMs > 0) this.tryDeflect();
+        this.meleeWorldHits(a);
         return;
       }
       case 'projectile':
@@ -1104,10 +1175,23 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     }
   }
 
+  private meleeWorldHits(a: Extract<AbilityAction, { kind: 'melee' }>): void {
+    const p = this.player;
+    const info: MeleeHitInfo = {
+      abilityId: a.abilityId,
+      comboIndex: a.comboIndex,
+      comboLength: a.comboLength,
+      haymaker: a.comboLength > 1 && a.comboIndex === a.comboLength - 1,
+    };
+    for (const h of [...this.meleeHooks]) {
+      if (h.screenId === this.screen.id && shapeHitsRect(a.shape, p.pos, p.aimDeg, h.area)) h.callback(info);
+    }
+  }
+
   private alarmGuardsHit(shape: AttackShape, angle: number): void {
     for (const { runner } of this.stealthHere()) {
       if (!runner.active) continue;
-      if (runner.guards.some((g) => shapeHits(shape, this.player.pos, angle, g.pos, PENDING_TUNING.combat.characterHitRadius))) runner.alarm();
+      if (runner.guards.some((g) => shapeHits(shape, this.player.pos, angle, g.pos, TUNING.combat.characterHitRadius))) runner.alarm();
     }
   }
 
@@ -1135,7 +1219,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     for (const proj of this.projectileList) {
       if (proj.done || proj.owner !== 'enemy' || !proj.shape.deflectable) continue;
       const reach = TUNING.abilities.hurley.shape.kind === 'arc' ? TUNING.abilities.hurley.shape.range : 0;
-      if (distance(proj.pos, p.pos) <= reach + PENDING_TUNING.combat.projectileRadius) {
+      if (distance(proj.pos, p.pos) <= reach + TUNING.combat.projectileRadius) {
         deflect(proj, p.aimDeg, { kind: 'player', abilityId: 'hurley' });
         this.opts.playEffect?.('deflect');
       }
@@ -1143,7 +1227,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   }
 
   private tickProjectiles(dtMs: number): void {
-    const r = PENDING_TUNING.combat.characterHitRadius;
+    const r = TUNING.combat.characterHitRadius;
     const p = this.player;
     for (const proj of this.projectileList) {
       if (proj.done) continue;
@@ -1177,7 +1261,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
         }
       }
       if (landedNow) {
-        this.fx.push({ kind: 'impact', pos: proj.pos, angleDeg: 0, radius: PENDING_TUNING.combat.lobSplashRadius, arcDeg: 0, ttlMs: 200 });
+        this.fx.push({ kind: 'impact', pos: proj.pos, angleDeg: 0, radius: TUNING.combat.lobSplashRadius, arcDeg: 0, ttlMs: 200 });
         if (proj.shape.impactNoiseRadius > 0) this.emitNoise({ kind: proj.frame === 'bottle' ? 'bottle' : 'other', position: proj.pos, radius: proj.shape.impactNoiseRadius });
       }
     }
@@ -1190,18 +1274,11 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   }
 
   private interact(): void {
-    const p = this.player;
-    let best: ExaminableDef | null = null;
-    let bestD = TUNING.investigation.interactRadius;
-    for (const e of this.examinablesHere()) {
-      const d = distance(e.position, p.pos);
-      if (d <= bestD) {
-        best = e;
-        bestD = d;
-      }
-    }
+    const target = this.interactTarget();
+    if (!target) return;
+    if (this.script.onExamine?.(target.examinableId) === true) return;
+    const best = this.module.examinables.find((e) => e.id === target.examinableId);
     if (!best) return;
-    if (this.script.onExamine?.(best.id) === true) return;
     if (best.dialogueId) void this.say(best.dialogueId);
     if (best.evidenceId) this.addEvidence(best.evidenceId);
     if (best.item) this.give(best.item);
@@ -1291,7 +1368,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       }
     }
     for (const cp of this.module.def.checkpoints) {
-      if (cp.screenId === this.screen.id && !this.reachedCheckpoints.has(cp.id) && distance(cp.position, pos) <= PENDING_TUNING.world.checkpointRadius) {
+      if (cp.screenId === this.screen.id && !this.reachedCheckpoints.has(cp.id) && distance(cp.position, pos) <= TUNING.world.checkpointRadius) {
         this.reachCheckpoint(cp.id);
       }
     }
@@ -1317,7 +1394,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       if (phase === 'fallen') this.myko.comment('drink', 'myko.banjaxed', true);
     });
     this.scope.on(GameEvents.BuzzStateChanged, ({ from, to }) => {
-      if (to === 'sober' && buzzStateRank(from) > 0 && this.msSinceGrandOrAbove >= PENDING_TUNING.player.soberRemarkMinMsAbove) {
+      if (to === 'sober' && buzzStateRank(from) > 0 && this.msSinceGrandOrAbove >= TUNING.player.soberRemarkMinMsAbove) {
         const line = this.opts.pool('andrew.sober');
         const pickIdx = Math.floor(this.rng.next() * line.length);
         const id = line[pickIdx];

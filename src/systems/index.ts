@@ -1,5 +1,6 @@
 /**
- * Public API of the systems. Chapters, UI and tests import from here only.
+ * Public API of the systems. Chapters, UI and tests import { TUNING } from '../content/tuning';
+import from here only.
  * DESIGN.md section 10: "A chapter never reaches into a system's internals;
  * it uses the public API in src/systems/index.ts."
  */
@@ -18,12 +19,19 @@ export type {
   DeductionPlacement,
   ExitDef,
   FightPlacement,
+  LightSource,
+  MeleeHitInfo,
+  NpcPlacement,
+  PropPlacement,
   PushPuzzlePlacement,
+  ScreenAmbient,
+  ScreenDressing,
   ScreenLayout,
   ScriptedCompletableHandle,
   SectionTrigger,
   StealthControl,
   StealthPlacement,
+  TileFootprint,
   TriggerDef,
 } from '../core/chapter';
 export { registerChapter, getChapter, registeredChapters } from '../core/chapter';
@@ -53,8 +61,9 @@ export { ChapterRun } from './run';
 export { GameSession, createUiState, carryOver, chapterSelectSave, saveAtChapterStart, emptyProgress } from './session';
 export type { SceneDriver, UiState } from './session';
 export { TILE, gridFromAscii, tileCentre, tileOf, lineOfSight, findPath } from './grid';
-export { shapeHits, shieldBlocks, knockbackVector, scaledDamage } from './combat';
-export { PENDING_TUNING } from './pendingTuning';
+export { shapeHits, shapeHitsRect, shieldBlocks, knockbackVector, scaledDamage } from './combat';
+export { Dressing } from './dressing';
+export type { InteractPoint, LiveNpc, LiveProp } from './dressing';
 
 /** The one game session. */
 export const session = new GameSession({ fallbackModule: createSandboxModule });

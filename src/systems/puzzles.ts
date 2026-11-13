@@ -8,10 +8,10 @@
  * (kegs off the gate) or "these cells are covered".
  */
 
+import { TUNING } from '../content/tuning';
 import type { GameEventBus, PuzzleDef, Reward, TileCoord, TileGrid, Vec2 } from '../core/types';
 import { PuzzleBase } from './investigation';
 import { isBlocked, tileCentre, tileOf } from './grid';
-import { PENDING_TUNING } from './pendingTuning';
 import type { SectionHost } from './sections';
 
 export interface PushPiece {
@@ -77,7 +77,7 @@ export class PushPuzzle extends PuzzleBase {
     return this.pieces.map((p) => {
       const to = tileCentre(p);
       if (p.slideMs <= 0) return { id: p.id, pos: to };
-      const t = 1 - p.slideMs / PENDING_TUNING.world.pushSlideMs;
+      const t = 1 - p.slideMs / TUNING.world.pushSlideMs;
       return { id: p.id, pos: { x: p.drawFrom.x + (to.x - p.drawFrom.x) * t, y: p.drawFrom.y + (to.y - p.drawFrom.y) * t } };
     });
   }
@@ -105,7 +105,7 @@ export class PushPuzzle extends PuzzleBase {
     piece.drawFrom = tileCentre(piece);
     piece.col = nc;
     piece.row = nr;
-    piece.slideMs = PENDING_TUNING.world.pushSlideMs;
+    piece.slideMs = TUNING.world.pushSlideMs;
     this.pushes++;
     this.onPush?.();
     if (this.goalMet()) this.solved();
@@ -125,7 +125,7 @@ export class PushPuzzle extends PuzzleBase {
       return;
     }
     const d = DELTA[dir];
-    const reach = PENDING_TUNING.player.bodyWidth / 2 + 2;
+    const reach = TUNING.player.bodyWidth / 2 + 2;
     const probe = { x: playerPos.x + d.col * reach, y: playerPos.y + d.row * reach };
     const t = tileOf(probe);
     const piece = this.pieces.find((p) => p.col === t.col && p.row === t.row && p.slideMs <= 0);
@@ -139,7 +139,7 @@ export class PushPuzzle extends PuzzleBase {
       this.holdMs = 0;
     }
     this.holdMs += dtMs;
-    if (this.holdMs >= PENDING_TUNING.world.pushHoldMs) {
+    if (this.holdMs >= TUNING.world.pushHoldMs) {
       this.holdMs = 0;
       this.push({ col: piece.col, row: piece.row }, dir);
     }

@@ -3,10 +3,10 @@
  * Plain TypeScript; the world owns the list and resolves hits.
  */
 
+import { TUNING } from '../content/tuning';
 import type { AttackShape, DamageSource, ScreenId, TileGrid, Vec2 } from '../core/types';
 import { add, distance, fromAngle, normalize, scale } from './geometry';
 import { isBlocked, tileOf } from './grid';
-import { PENDING_TUNING } from './pendingTuning';
 
 export type ProjectileShape = Extract<AttackShape, { kind: 'projectile' }>;
 
@@ -107,7 +107,7 @@ export function stepProjectile(p: Projectile, grid: TileGrid, dtMs: number): boo
   p.travelled += move;
   if (p.shape.lobbed) {
     const t = p.totalDistance > 0 ? p.travelled / p.totalDistance : 1;
-    p.height = 4 * PENDING_TUNING.combat.lobPeakHeight * t * (1 - t);
+    p.height = 4 * TUNING.combat.lobPeakHeight * t * (1 - t);
     p.pos = next;
     if (p.travelled >= p.totalDistance - 0.001) {
       p.done = true;
@@ -143,7 +143,7 @@ export function deflect(p: Projectile, towardDeg: number, abilitySource: DamageS
 
 /** Whether a straight (or landing lobbed) projectile touches a circle. */
 export function projectileTouches(p: Projectile, centre: Vec2, radius: number): boolean {
-  const r = p.shape.lobbed ? PENDING_TUNING.combat.lobSplashRadius : PENDING_TUNING.combat.projectileRadius;
+  const r = p.shape.lobbed ? TUNING.combat.lobSplashRadius : TUNING.combat.projectileRadius;
   return distance(p.pos, centre) <= r + radius;
 }
 
