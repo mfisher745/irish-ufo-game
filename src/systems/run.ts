@@ -964,7 +964,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   private stealthHost(placement: StealthPlacement | null): StealthHost {
     return {
       bus: this.bus,
-      getGrid: () => this.screen.grid,
+      getGrid: () => this.grid,
       raiseAlarm: (_sectionId, fightId, guards) => this.raiseAlarm(fightId, guards, placement),
       cleanRun: (def) => this.cleanRun(def),
     };
