@@ -3,10 +3,10 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: 'tests/e2e',
   testMatch: '**/*.spec.ts',
-  use: { baseURL: 'http://localhost:4173/irish-ufo-game/' },
+  use: { baseURL: 'http://localhost:4173/same-again/' },
   webServer: {
     command: 'pnpm build && pnpm exec vite preview',
-    url: 'http://localhost:4173/irish-ufo-game/',
+    url: 'http://localhost:4173/same-again/',
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,
   },

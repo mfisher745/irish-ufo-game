@@ -4,8 +4,8 @@ import { join, relative } from 'node:path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 
-// GitHub Pages project site: https://<owner>.github.io/irish-ufo-game/
-const BASE = '/irish-ufo-game/';
+// GitHub Pages project site: https://<owner>.github.io/same-again/
+const BASE = '/same-again/';
 
 function walk(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
