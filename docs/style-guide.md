@@ -48,7 +48,7 @@ Every enemy attack has a telegraph frame held for at least 400 ms. If the player
 ## 5. Font
 
 - One bitmap font generated in code: 5 × 7 glyphs in a 6 × 9 cell, upper and lower case, digits, and `. , ' " ! ? : ; - ( ) / + × € $ % &`. Include á é í ó ú and their capitals; "Poitín" must render properly.
-- Text is `white` on `ink` with no shadow. Speaker names are coloured: Andrew `anorak`, Myko `motelPinkShade` on dark backgrounds and `beanie` on the casebook's light page, everyone else `fog`. Narrator cards are `bone`, centred, all caps.
+- Text is `white` on `ink` with no shadow. Speaker names are coloured: Andrew `grass`, Myko `motelPinkShade` on dark backgrounds and `beanie` on the casebook's light page, everyone else `fog`. Narrator cards are `bone`, centred, all caps.
 - A dialogue line fits in 3 lines of 64 characters. Anything longer is two lines of dialogue or a worse joke.
 
 ## 6. Writing

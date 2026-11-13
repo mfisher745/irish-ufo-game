@@ -18,18 +18,22 @@ const outlined = (draw: Draw): Draw => (b) => {
   b.blit(layer, 0, 0);
 };
 
-/** A pint glass filled to `level` of 3. */
-const pint = (level: 0 | 1 | 2 | 3): Draw =>
-  outlined((b) => {
-    b.rect(3, 2, 6, 8, 'fog');
-    b.rect(4, 2, 4, 7, 'steel');
+/**
+ * A pint glass filled to `level` of 3. Drawn with a light rim and no ink
+ * outline, because it sits on the dark HUD strip where an ink outline vanishes.
+ */
+const pint =
+  (level: 0 | 1 | 2 | 3): Draw =>
+  (b) => {
+    const rim = level === 0 ? 'steel' : 'bone';
+    b.rect(2, 1, 8, 10, rim);
+    b.rect(3, 1, 6, 9, 'coal');
     if (level > 0) {
-      const h = level === 3 ? 7 : level === 2 ? 4 : 2;
-      b.rect(4, 9 - h, 4, h, 'ink');
-      b.rect(4, 9 - h, 4, level === 3 ? 2 : 1, 'bone');
+      const h = level === 3 ? 9 : level === 2 ? 5 : 3;
+      b.rect(3, 10 - h, 6, h, 'turf');
+      b.rect(3, 10 - h, 6, level === 3 ? 3 : 1, 'white');
     }
-    b.set(8, 3, 'white');
-  });
+  };
 
 /** A bottle: body colour, label colour, and how tall. */
 const bottle = (body: ColourName, label: ColourName, tall = true): Draw =>
@@ -87,9 +91,10 @@ const ABILITIES: Readonly<Record<AbilityId, Draw>> = {
   stumble: outlined((b) => {
     b.rect(6, 2, 3, 3, 'skin').line(6, 5, 3, 8, 'anorak').line(4, 8, 2, 10, 'denim').line(5, 8, 7, 10, 'denim');
   }),
-  stoutSlam: outlined((b) => {
-    b.rect(4, 2, 4, 6, 'coal').hline(4, 2, 4, 'bone').hline(1, 9, 10, 'amberLight').set(2, 7, 'amber').set(9, 7, 'amber');
-  }),
+  stoutSlam: (b) => {
+    b.rect(3, 1, 6, 8, 'bone').rect(4, 1, 4, 7, 'turf').rect(4, 1, 4, 2, 'white');
+    b.hline(0, 10, 12, 'amberLight').set(1, 8, 'amber').set(10, 8, 'amber').set(0, 6, 'amber').set(11, 6, 'amber');
+  },
   actNatural: outlined((b) => {
     b.rect(4, 2, 4, 3, 'skin').rect(3, 5, 6, 5, 'anorak').set(5, 3, 'ink').set(7, 3, 'ink').set(9, 1, 'fog').set(10, 2, 'fog');
   }),
@@ -113,14 +118,12 @@ export function iconSheet(): Sheet {
   sheet.cell(icon.pintHalf, pint(2));
   sheet.cell(icon.pintEmpty, pint(0));
   sheet.cell(icon.empty, bottle('moss', 'mossDark'));
-  sheet.cell(
-    icon.rollie,
-    outlined((b) => {
-      b.line(2, 8, 8, 4, 'white').line(2, 9, 8, 5, 'bone').set(9, 3, 'amber').set(10, 1, 'fog');
-    }),
-  );
+  // Rollies sit on the dark HUD strip too: light shapes, no ink outline.
+  sheet.cell(icon.rollie, (b) => {
+    b.rect(1, 6, 8, 3, 'white').hline(1, 8, 8, 'bone').rect(9, 6, 2, 3, 'amber').set(10, 4, 'fog').set(9, 2, 'fog').set(10, 1, 'steel');
+  });
   sheet.cell(icon.rollieSpent, (b) => {
-    b.rect(4, 7, 3, 2, 'ink').set(7, 7, 'coal');
+    b.rect(4, 7, 4, 2, 'steel').rect(8, 7, 1, 2, 'slate');
   });
   sheet.cell(
     icon.detection,
