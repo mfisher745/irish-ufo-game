@@ -18,6 +18,13 @@ export const PROP = {
   noticeboard: 'noticeboard',
   vendingMachine: 'vendingMachine',
   bins: 'bins',
+  // Breakables (DESIGN.md 7.1). Each breaks into `debris`.
+  barrel: 'barrel',
+  bottleCrate: 'bottleCrate',
+  cardboardBox: 'cardboardBox',
+  flowerPot: 'flowerPot',
+  sack: 'sack',
+  debris: ['debris.0', 'debris.1'],
   // Chapter 1
   fruitMachine: 'fruitMachine',
   dartboard: 'dartboard',
@@ -73,6 +80,32 @@ export function propsSheet(): Sheet {
     b.rect(1, 4, 6, 11, 'moss').hline(1, 4, 6, 'grass').rect(0, 3, 8, 1, 'mossDark');
     b.ellipse(8, 7, 7, 8, 'coal').set(11, 6, 'slate');
   }));
+
+  atlas.add(PROP.barrel, 16, 16, outlined((b) => {
+    b.ellipse(2, 1, 12, 14, 'peat').rect(3, 3, 10, 10, 'peat');
+    b.hline(2, 4, 12, 'steel').hline(2, 11, 12, 'steel').vline(6, 2, 12, 'turf').vline(10, 2, 12, 'turf').hline(4, 1, 8, 'tan');
+  }));
+  atlas.add(PROP.bottleCrate, 16, 16, outlined((b) => {
+    b.rect(1, 6, 14, 9, 'amber').hline(1, 14, 14, 'peat').vline(5, 7, 7, 'peat').vline(10, 7, 7, 'peat');
+    for (const x of [3, 7, 12]) b.rect(x, 2, 2, 5, 'moss').set(x, 1, 'bone');
+  }));
+  atlas.add(PROP.cardboardBox, 16, 16, outlined((b) => {
+    b.rect(2, 4, 12, 11, 'tan').hline(2, 14, 12, 'tanShade').vline(13, 5, 10, 'tanShade').hline(2, 4, 12, 'sand').vline(8, 4, 5, 'tanShade');
+  }));
+  atlas.add(PROP.flowerPot, 16, 16, outlined((b) => {
+    b.rect(5, 9, 6, 6, 'brick').hline(4, 9, 8, 'brickDark').ellipse(3, 2, 10, 8, 'grass').set(5, 4, 'motelPink').set(9, 3, 'amberLight').set(8, 6, 'motelPink');
+  }));
+  atlas.add(PROP.sack, 16, 16, outlined((b) => {
+    b.ellipse(3, 4, 10, 11, 'bone').hline(4, 14, 8, 'fog').rect(6, 2, 4, 3, 'bone').hline(6, 4, 4, 'peat');
+  }));
+  PROP.debris.forEach((name, i) => {
+    atlas.add(name, 16, 16, (b) => {
+      // Splinters and shards on the ground; not solid, no outline.
+      const bits: [number, number, number, number][] = i === 0 ? [[3, 10, 4, 2], [9, 12, 3, 1], [6, 13, 2, 2], [11, 9, 2, 2]] : [[2, 12, 3, 1], [7, 13, 4, 1], [12, 11, 2, 2], [5, 10, 2, 1]];
+      for (const [x, y, w, h] of bits) b.rect(x, y, w, h, 'turf');
+      b.set(8, 11, 'fog').set(4, 13, 'tan').set(12, 13, 'fog');
+    });
+  });
 
   atlas.add(PROP.fruitMachine, 16, 24, outlined((b) => {
     b.rect(1, 1, 14, 22, 'brickDark').vline(14, 2, 21, 'ink').hline(1, 1, 14, 'brick');

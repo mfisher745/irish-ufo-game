@@ -75,6 +75,8 @@ export const icon = {
   rollieSpent: 'rollie.spent',
   detection: 'detection',
   interact: 'interact',
+  mouseLeft: 'mouse.left',
+  mouseRight: 'mouse.right',
   drink: (id: DrinkId): string => `drink.${id}`,
   food: (id: FoodId): string => `food.${id}`,
   ability: (id: AbilityId): string => `ability.${id}`,

@@ -15,8 +15,8 @@ Owner: `creative-director`. This document says how the game looks, reads and sou
 
 | Sprite | Size | Notes |
 |---|---|---|
-| Andrew | 16 × 24 | Head 8 px tall, body narrow: 8 px at the shoulders, no belly curve. `anorak` jacket, `denim` legs, `bone` runners. Two-pixel stubble row in `skinShade`. Eyes are a single `ink` pixel each with a `skinShade` pixel under them (tired). |
-| Myko | 16 × 32 | Head top is 8 px above Andrew's when they stand on the same row. 6 px at the shoulders. `mykoCoat` to the knee, `beanie`, one `white` pixel of rollie with an `amber` tip that blinks every 2 seconds. Mouth is a 3-pixel line raised one pixel at one end (the half-smile). It never changes until the epilogue. |
+| Andrew | 16 × 28 | Head 8 px tall, body narrow: 8 px at the shoulders, no belly curve. `anorak` jacket, `denim` legs, `bone` runners. Two-pixel stubble row in `skinShade`. Eyes are a single `ink` pixel each with a `skinShade` pixel under them (tired). |
+| Myko | 16 × 32 | Head top is 4 px above Andrew's when they stand on the same row. 6 px at the shoulders. `mykoCoat` to the knee, no hat, untidy `turf` hair, one `white` pixel of rollie with an `amber` tip that blinks every 2 seconds. Mouth is a 3-pixel line raised one pixel at one end (the half-smile). It never changes until the epilogue. |
 | Humans | 16 × 24 to 16 × 28 | One distinguishing item each: Dympna's tea towel, Halloran's hi-vis over a suit, Pruitt's lanyard and thermos. |
 | Aliens | 16 × 20 | `alienGrey` skin, large `ink` eyes, shirt and tie. Shorter than Andrew, which he notices. |
 | Bosses | Up to 32 × 40, vehicles up to 64 × 48 | Same three-tone rule. |
@@ -69,8 +69,9 @@ DESIGN.md section 2 is the rule. These are the mechanics of applying it.
 
 ## 7. Sound
 
-- Dialogue blips: one square-wave blip per character shown, 880 Hz for Andrew, 440 Hz for Myko, 660 Hz for everyone else, 1320 Hz with slight detune for aliens.
+- Text sound: one soft click per character shown, like a telegram printer: a few milliseconds of filtered noise with a very short body, quiet (well under the effects level), slightly lower for Myko, slightly brighter for aliens. No sustained pitch.
 - Regional themes are 16 to 32 bars, loop cleanly and stay under the effects in the mix. Kilnamoe: tin-whistle-like lead (triangle with fast vibrato) in D minor over a drone, slow. Cities: walking bass and hi-hat noise. Ohio: major key, open fifths, unhurried; it is the happiest tune in the game. Roswell: theremin-like sine with portamento over a cheap drum machine. Nevada: sparse, one low drone and wind noise. Base: detuned pads and a clock tick.
 - Hits are short noise bursts with a pitch drop. The haymaker and the hurley get a lower thump layered under.
 - The alarm is two alternating tones and stops as soon as the fight it triggered is over.
-- Myko's call-in has no fanfare. The music drops to the bass line only until he is done.
+- Myko's call-in has no fanfare. The music cuts out for the blackout, with at most two or three small off-screen sounds, and returns when the game does.
+- Boss music: the regional theme at about 1.3 times the tempo with a kick, snare-like noise and a driving bass added, stepping up again at each phase change.

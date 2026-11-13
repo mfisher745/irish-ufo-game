@@ -21,6 +21,7 @@ import { C07 } from './c07';
 import { C08 } from './c08';
 import { C09 } from './c09';
 import { C10 } from './c10';
+import { CALLINS } from './callins';
 import { COMMON } from './common';
 
 export interface DialogueFile {
@@ -29,7 +30,7 @@ export interface DialogueFile {
   readonly pools?: Readonly<Record<string, readonly DialogueId[]>>;
 }
 
-const FILES: readonly DialogueFile[] = [COMMON, C01, C02, C03, C04, C05, C06, C07, C08, C09, C10];
+const FILES: readonly DialogueFile[] = [COMMON, CALLINS, C01, C02, C03, C04, C05, C06, C07, C08, C09, C10];
 
 const TEXT = new Map<TextId, string>();
 const SEQUENCES = new Map<DialogueId, DialogueSequence>();

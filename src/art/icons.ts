@@ -137,6 +137,14 @@ export function iconSheet(): Sheet {
       b.rect(2, 2, 8, 8, 'bone').hline(2, 9, 8, 'fog').rect(4, 4, 1, 4, 'ink').hline(4, 4, 4, 'ink').hline(4, 5, 3, 'ink').hline(4, 7, 4, 'ink');
     }),
   );
+  // Mouse buttons for the HUD: a light mouse with the button in question lit.
+  const mouse = (right: boolean): Draw => (b) => {
+    b.rect(3, 1, 6, 10, 'fog').rect(3, 1, 6, 4, 'steel').vline(6, 1, 4, 'coal');
+    b.rect(right ? 7 : 3, 1, right ? 2 : 3, 4, 'amberLight');
+    b.set(3, 1, null).set(8, 1, null).set(3, 10, null).set(8, 10, null);
+  };
+  sheet.cell(icon.mouseLeft, mouse(false));
+  sheet.cell(icon.mouseRight, mouse(true));
   for (const [id, draw] of Object.entries(DRINKS)) sheet.cell(icon.drink(id as DrinkId), draw);
   for (const [id, draw] of Object.entries(FOODS)) sheet.cell(icon.food(id as FoodId), draw);
   for (const [id, draw] of Object.entries(ABILITIES)) sheet.cell(icon.ability(id as AbilityId), draw);

@@ -62,7 +62,7 @@ Voice samples. These set the register; they are not required lines.
 ### Andrew (player character)
 
 - 38, from Kilnamoe, County Leitrim (a fictional town). On the dole. Three-time winner of the Feeney's table quiz, which he mentions.
-- Short and slight. He is noticeably shorter than Myko and he is not pudgy. He wears a worn green-grey anorak, jeans and runners, and has stubble and tired eyes.
+- Short and slight. He is about half a head shorter than Myko and he is not pudgy. He wears a worn green-grey anorak, jeans and runners, and has stubble and tired eyes.
 - He has a chip on his shoulder. He wants to prove himself to the world, and it does not matter how. Aliens are what turned up. If it had been a record-breaking turnip he would have gone after that with the same face.
 - He believes in aliens with complete, calm certainty. He is polite, stubborn and hopeless with money, and he is braver than he should be once he has had a few.
 - He never says any of this out loud. It shows in what he mentions (the table quiz), in who he brings up without being asked (people from school who "did well"), and in how much he hates asking Myko for help.
@@ -71,10 +71,10 @@ Voice samples. These set the register; they are not required lines.
 ### Myko (sidekick and narrator)
 
 - Andrew's best mate since school. Nobody remembers why he's called Myko, and he won't say.
-- He is a full head taller than Andrew, thin, with a long coat, a beanie and a permanent half-smile.
+- He is half a head taller than Andrew, thin, with a long coat, untidy brown hair, no hat and a permanent half-smile.
 - He is sardonic and condescending to Andrew in almost every line. He is also completely loyal. He pays for the flights, carries the bags and never once suggests going home.
-- He drinks, but he prefers to smoke cannabis. He is usually mildly stoned, which is shown by a rolled cigarette, slow blinks and the odd tangent. It is never shown as a how-to and it is never a power-up.
-- His commentary does most of the narration. A narrator caption appears only for chapter titles and location cards.
+- He drinks, but he prefers to smoke cannabis. He is usually mildly stoned, which is shown by a rolled cigarette, slow blinks, the odd tangent and, about once a minute when he is standing still, a puff of smoke that hangs around his head until he moves. It is never shown as a how-to and it is never a power-up.
+- His commentary does most of the narration. A narrator caption appears only for chapter titles, location cards and the blackout when Myko is called in.
 - He sometimes offers an idea or a hint. Some of his ideas are good.
 - He does not fight unless Andrew asks him to. His position on this: "I'm here in an advisory capacity." When he is asked, he is immediately and effortlessly better at everything than Andrew is, and he never explains how (see 7.5).
 - He loves Ohio. Nothing prepares the player for this and he gives no reason. For all of chapter 6 he marvels at it: the width of the roads, the motel ice machine, the size of the sky, the manners. It is sincere, with no sarcasm in it at all, and it is the only thing besides the ending that he is sincere about. Andrew does not see it and Myko pities him for that.
@@ -157,6 +157,10 @@ Costs carry over. If a chapter ends at Locked or above, the next one starts with
 
 Every drink leaves an **empty**, and empties are the ammunition for Bottle Throw. Drinking and fighting feed each other.
 
+Buzz does not start draining until a few seconds after the last drink, so one pint is worth having.
+
+**Breakables.** Most loose objects in the world can be broken with a melee hit or a thrown bottle: crates, barrels, bins, boxes, flowerpots, vending machines and their like. A broken object usually drops a drink, food or an empty. If Andrew can walk up to it and it is not part of a puzzle or the plot, he should be able to break it. What drops comes from the region (stout and crisps in Kilnamoe, light beer in America).
+
 | Drink | Found | Effect |
 |---|---|---|
 | Pint of stout | Ireland, the Boston bar | Buzz +20, heals 15 |
@@ -214,13 +218,14 @@ Death returns the player to the last checkpoint with a line from Myko. Checkpoin
 - H asks for a hint about the current objective. The first hint is a nudge, the second is the answer, and both arrive wrapped in an insult.
 - He comments without being asked on clues, drinks, deaths, hangovers and long periods of the player doing nothing.
 - Commentary must never block play. Lines appear in a box at the bottom of the screen and play continues, except in scripted scenes.
+- Nothing is said twice. A scripted scene, a lesson or a remark tied to a place plays once per save and never again, even after a death or a reload. Only three kinds of line may repeat: hints the player asks for, lines drawn from a pool (death, idle, tangents), and the line for an object the player deliberately examines again. A remark that has been waiting behind other lines is dropped if Andrew has left the screen or the moment it was about.
 - In chapter 6 his unprompted commentary is mostly admiration for Ohio. From chapter 7 on, about two in three of his tangents are about Ohio.
 
 **Calling Myko in**
 
 - Holding M asks Myko to finish the current fight or puzzle. Andrew has **three calls for the whole game**. They do not refill, and the number left is stored in the save.
 - It works on any combat encounter, any boss or finale set piece, any physical puzzle and any deduction board. It does not work on stealth sections that have not turned into a fight, and it does not work on the Administrator. Andrew does that one himself.
-- Myko always succeeds, at once and without effort. In a fight he strolls in from the entrance, still smoking, and every enemy is down within about three seconds. He does it with one hand, or with whatever he happened to be holding, and he does not break stride. In a puzzle he glances at it and solves it in one move. How he can do any of this is never explained, and nobody asks.
+- Myko always succeeds, at once and without effort, and the player never sees how. The screen cuts to black. Two or three narrator cards say, flatly, how little time it took and how little trouble it was. The game comes back with every enemy on the ground, or the puzzle solved, and Myko standing where he was, still smoking. How he can do any of this is never explained, and nobody asks.
 - Afterwards he gives Andrew a good-natured hard time about it. The slagging is warm, and it is the fondest he sounds before the ending. Each chapter has its own lines for a fight call and a puzzle call.
 - A call costs Andrew nothing except his pride. The encounter counts as complete and gives its normal rewards. It is recorded in the casebook in Andrew's words, briefly and inaccurately ("Myko helped a bit"), with Myko's correction in the margin.
 - The call is spent the moment it is used and the game saves immediately, so reloading does not give it back.
@@ -236,7 +241,7 @@ Progress saves automatically to the browser's local storage at each checkpoint, 
 
 - Internal resolution 480 × 270, scaled by whole numbers to fit the window, with no smoothing. A fullscreen option in Settings (and Alt+Enter) lets it fill the screen; the installed PWA opens fullscreen.
 - Tiles are 16 × 16.
-- Andrew is 16 × 24. Myko is 16 × 32, and the height difference must be obvious when they stand together.
+- Andrew is 16 × 28. Myko is 16 × 32. Andrew is about half a head shorter, and the difference must be obvious when they stand together.
 - Four-direction walk cycles of four frames. Attack, hurt, drink and fall-over animations for Andrew.
 - One master palette of 48 colours, with a sub-palette per region:
 
@@ -249,13 +254,18 @@ Progress saves automatically to the browser's local storage at each checkpoint, 
 | Nevada, the base | Heat outside, cold inside | Sand, rust, then teal and violet |
 
 - The aliens are small, grey and neatly dressed. They look like people who work in an office, because they do.
-- Andrew's sprite is short and slight, not round. Myko's is tall and thin.
-- HUD: health, Buzz meter with its four states marked, empties count, selected drink, current ability, and Myko calls left (three small rollie icons). Dialogue box with a 32 × 32 portrait.
+- Andrew's sprite is short and slight, not round. Myko's is tall and thin, bare-headed, with brown hair.
+- HUD: every slot shows its icon and the key or mouse button that uses it. Health top left. Along the bottom: the three drink slots (1, 2, 3, with Q on the selected one), empties with the right mouse button, the melee attack with the left mouse button, the dodge with Space once learned, the special with F, the Buzz meter and its state name in the centre, and Myko calls left (three small rollie icons, M). Things Andrew can pick up or examine are drawn as themselves with a small glint, never as abstract markers. Dialogue box with a 32 × 32 portrait.
 - A pixel bitmap font, generated in code.
 
 ## 9. Audio
 
-All sound is synthesised with Web Audio. One short looping theme per region and about 25 effects (hits, bottle smash, drink, footsteps, alarm, dialogue blips with a lower pitch for Myko). The Irish themes use a tin-whistle-like lead in a minor key and stay away from jig clichés. Music and effects have separate volume sliders.
+All sound is synthesised with Web Audio. Music and effects have separate volume sliders.
+
+- **Themes.** One theme per region, built from several sections so it does not wear out: a main section, a variation with a second whistle or recorder line in harmony, a sparser section with a plucked guitar-like accompaniment, and now and then a livelier section in the same key. Sections are chosen in a shuffled order so no loop is heard twice running. The Kilnamoe theme is melancholy, with a tin-whistle-like lead in a minor key, and stays away from jig clichés.
+- **Boss music.** When a boss or set piece starts, the regional theme speeds up, gains percussion and a driving bass, and gets more intense again at each phase change. It drops back when the fight ends.
+- **Effects.** About 30 (hits, bottle smash, drink, footsteps, alarm, things breaking).
+- **Text sound.** A soft, short click per character, like a telegram being printed. It is quiet, slightly lower for Myko, and never tonal enough to be a tune.
 
 ## 10. Technical design
 

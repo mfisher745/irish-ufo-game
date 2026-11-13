@@ -122,7 +122,7 @@ function drawFace(b: PixelBuffer, f: Face): void {
 
 const FACES: Readonly<Record<SpeakerId, Face>> = {
   andrew: { background: 'mossDark', skin: 'skin', skinShade: 'skinShade', top: 'anorak', topShade: 'mossDark', hair: 'turfDark', tired: true, stubble: true, collar: 'slate' },
-  myko: { background: 'coal', skin: 'skinLight', skinShade: 'skin', top: 'mykoCoat', topShade: 'ink', hat: 'beanie', halfSmile: true, rollie: true, width: 13 },
+  myko: { background: 'coal', skin: 'skinLight', skinShade: 'skin', top: 'mykoCoat', topShade: 'ink', hair: 'turf', hairRows: 5, halfSmile: true, rollie: true, width: 13 },
   dympna: { background: 'turfDark', skin: 'skinLight', skinShade: 'skin', top: 'brick', topShade: 'brickDark', hair: 'fog', hairRows: 5, frown: true, collar: 'bone', width: 17 },
   halloran: { background: 'slate', skin: 'skin', skinShade: 'skinShade', top: 'amberLight', topShade: 'amber', hair: 'fog', hairRows: 3, tie: 'moss', collar: 'white' },
   colleenAnn: { background: 'brickDark', skin: 'skinLight', skinShade: 'skin', top: 'grass', topShade: 'moss', hair: 'amber', longHair: true, halfSmile: true },
