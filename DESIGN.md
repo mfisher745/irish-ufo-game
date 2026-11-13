@@ -234,7 +234,7 @@ Progress saves automatically to the browser's local storage at each checkpoint, 
 
 16-bit console style, drawn in code to canvas textures at load time.
 
-- Internal resolution 480 × 270, scaled by whole numbers to fit the window, with no smoothing.
+- Internal resolution 480 × 270, scaled by whole numbers to fit the window, with no smoothing. A fullscreen option in Settings (and Alt+Enter) lets it fill the screen; the installed PWA opens fullscreen.
 - Tiles are 16 × 16.
 - Andrew is 16 × 24. Myko is 16 × 32, and the height difference must be obvious when they stand together.
 - Four-direction walk cycles of four frames. Attack, hurt, drink and fall-over animations for Andrew.
