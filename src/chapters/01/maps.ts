@@ -1,11 +1,13 @@
 /**
- * Chapter 1 screens as tile layouts. Level data only: each screen is painted
- * onto a character canvas, then turned into tile frames and a collision and
- * sight grid derived from `tileFlags`, so the art and the walls cannot drift.
+ * Chapter 1 screens as tile layouts, dressing and night ambience. Level data
+ * only: each screen is painted onto a character canvas, then turned into tile
+ * frames and a collision and sight grid derived from `tileFlags`, so the art
+ * and the walls cannot drift.
  */
 
+import { PROP } from '../../art/props';
 import { tileFlags, tileIndex } from '../../art/tiles';
-import type { ExitDef, ScreenLayout } from '../../core/chapter';
+import type { ExitDef, ScreenAmbient, ScreenDressing, ScreenLayout } from '../../core/chapter';
 import type { ScreenId, TileGrid, Vec2 } from '../../core/types';
 import { tileCentre } from '../../systems';
 
@@ -36,7 +38,21 @@ const LEGEND: Readonly<Record<string, string>> = {
   K: 'stoneWall',
   o: 'cover',
   P: 'bogPool',
+  n: 'nightGrass',
+  k: 'kerb',
+  R: 'roofSlate',
+  C: 'churchStone',
+  X: 'shopfrontLit',
+  Y: 'shopfrontDark',
+  D: 'doorWood',
+  E: 'doorLit',
 };
+
+interface Extras {
+  readonly mykoStart?: Vec2;
+  readonly dressing?: ScreenDressing;
+  readonly ambient?: ScreenAmbient;
+}
 
 class Canvas {
   private readonly cells: string[][];
@@ -67,7 +83,7 @@ class Canvas {
   char(col: number, row: number): string {
     return this.cells[row]?.[col] ?? '#';
   }
-  build(id: ScreenId, exits: readonly ExitDef[], playerStart: Vec2, mykoStart?: Vec2): ScreenLayout {
+  build(id: ScreenId, exits: readonly ExitDef[], playerStart: Vec2, extras: Extras = {}): ScreenLayout {
     const tiles: number[] = [];
     const blocked: boolean[] = [];
     const blocksSight: boolean[] = [];
@@ -83,7 +99,7 @@ class Canvas {
       }
     }
     const grid: TileGrid = { widthTiles: this.width, heightTiles: this.height, blocked, blocksSight };
-    return { id, grid, tiles, exits, playerStart, ...(mykoStart ? { mykoStart } : {}) };
+    return { id, grid, tiles, exits, playerStart, ...extras };
   }
 }
 
@@ -107,9 +123,14 @@ export const ROAD_ARRIVAL = T(2, 8);
 export const KEG_AREA = { col: 11, row: 5, width: 6, height: 5 } as const;
 export const kegTile = (x: number, y: number) => ({ col: KEG_AREA.col + x, row: KEG_AREA.row + y });
 
-/** Street landmarks (tile coordinates) the script and the boss hooks refer to. */
+/** Street landmarks (tiles) the boss hooks refer to; both are solid props. */
 export const TRACTOR = { col: 65, row: 7, width: 3, height: 2 } as const;
 export const CHURCH_GATE = { col: 41, row: 7, width: 2, height: 2 } as const;
+/** The fruit machine on the pub's west wall (the melee hook area). */
+export const MACHINE_AREA = tilesArea(1, 6, 1, 2);
+/** Where the bog lights start on the road (tile of the prop's top-left). */
+export const BOG_LIGHTS_START = { col: 18, row: 11 } as const;
+export const ROAD_DARK: ScreenAmbient = { tint: 'navyDark', strength: 0.75 };
 
 // ---------------------------------------------------------------------------
 // c1.pub 30 x 17
@@ -126,12 +147,26 @@ export function pubScreen(): ScreenLayout {
   c.rect(13, 10, 2, 1, 't').set(12, 10, 's').set(15, 10, 's');
   c.rect(20, 8, 2, 1, 't').set(19, 8, 's').set(22, 8, 's');
   c.rect(3, 13, 2, 1, 't').set(2, 13, 's');
-  // The fruit machine glows in the west wall.
-  c.set(1, 7, 'w');
   // Back door to the keg yard, bottom right.
   c.rect(26, 15, 2, 2, 'd');
   const exits: ExitDef[] = [{ id: 'c1.pub.backdoor', area: tilesArea(26, 15, 2, 2), toScreen: 'c1.yard', spawn: YARD_ARRIVAL }];
-  return c.build('c1.pub', exits, PUB_START, MYKO_SEAT);
+  const dressing: ScreenDressing = {
+    props: [
+      { frame: PROP.beerTaps, col: 8, row: 2 },
+      { frame: PROP.beerTaps, col: 14, row: 2 },
+      { frame: PROP.trophyShelf, col: 24, row: 1 },
+      { frame: PROP.telly, col: 27, row: 1 },
+      { frame: PROP.fruitMachine, col: 1, row: 6 },
+      { frame: PROP.teamPhoto, col: 1, row: 4 },
+      { frame: PROP.dartboard, col: 1, row: 10 },
+    ],
+    npcs: [
+      { id: 'dympna', npc: 'dympna', col: 21, row: 2, facing: 'down', examinableId: 'c1.dympna' },
+      { id: 'local1', npc: 'localB', col: 8, row: 8, facing: 'up' },
+      { id: 'local2', npc: 'localA', col: 14, row: 11, facing: 'up' },
+    ],
+  };
+  return c.build('c1.pub', exits, PUB_START, { mykoStart: MYKO_SEAT, dressing });
 }
 
 // ---------------------------------------------------------------------------
@@ -145,13 +180,18 @@ export function yardScreen(): ScreenLayout {
   // The way to Main Street: a break in the east wall with gateposts, and a path strip leading to it.
   c.rect(14, 7, 4, 1, 'p').rect(18, 7, 2, 1, 'p');
   c.set(18, 6, 'G').set(18, 8, 'G');
-  // Stacked crates and bins along the south and west, out of the way of the puzzle.
+  // Stacked crates along the south and west, out of the way of the puzzle.
   c.rect(2, 12, 2, 2, 'o').rect(8, 13, 2, 1, 'o').rect(2, 4, 1, 2, 'o').rect(5, 14, 1, 1, 'o');
   const exits: ExitDef[] = [
     { id: 'c1.yard.door', area: tilesArea(4, 0, 2, 2), toScreen: 'c1.pub', spawn: PUB_BACK_ARRIVAL },
     { id: 'c1.yard.gate', area: tilesArea(18, 7, 2, 1), toScreen: 'c1.street', spawn: STREET_ARRIVAL, lockedUntil: ['c1.puzzle.kegs'] },
   ];
-  return c.build('c1.yard', exits, YARD_ARRIVAL);
+  const ambient: ScreenAmbient = {
+    tint: 'navyDark',
+    strength: 0.45,
+    lights: [{ x: 5 * 16, y: 2 * 16 + 8, radius: 60, colour: 'amber' }],
+  };
+  return c.build('c1.yard', exits, YARD_ARRIVAL, { ambient });
 }
 
 // ---------------------------------------------------------------------------
@@ -161,29 +201,59 @@ export function yardScreen(): ScreenLayout {
 export function streetScreen(): ScreenLayout {
   const c = new Canvas(70, 17, 'p');
   c.rect(0, 0, 70, 1, '#').rect(0, 15, 70, 2, '#').rect(0, 0, 1, 17, '#').rect(69, 0, 1, 17, '#');
-  // Frontages along the top, then the pavement, the road, the far pavement and a hedge.
-  c.rect(1, 1, 68, 4, 'W');
-  c.rect(1, 5, 68, 1, ',').rect(1, 13, 68, 1, ',');
+  // Frontages along the top (roof, then two storeys of wall), pavement, kerb, road, kerb, pavement, hedge.
+  c.rect(1, 1, 68, 2, 'R').rect(1, 3, 68, 2, 'W');
+  c.rect(1, 5, 68, 1, ',').rect(1, 6, 68, 1, 'k').rect(1, 12, 68, 1, 'k').rect(1, 13, 68, 1, ',');
   c.rect(1, 14, 68, 1, 'H');
   for (let col = 4; col < 68; col += 4) c.set(col, 9, 'l');
-  // Feeney's, cols 2 to 14: lit windows. The front door is shut for the night.
-  for (const col of [4, 6, 10, 12]) c.set(col, 3, 'w');
-  // The bookies, cols 16 to 24.
-  for (const col of [18, 21]) c.set(col, 3, 'w');
-  // The alley between the bookies and the chipper, with bins.
-  c.rect(25, 1, 3, 4, 'p').rect(26, 3, 2, 1, 'o');
-  // The chipper, cols 28 to 39, lit, with light spilling over the pavement and road in front.
-  for (const col of [30, 31, 36, 37]) c.set(col, 3, 'w');
-  c.rect(28, 5, 12, 1, 'L').rect(29, 6, 10, 2, 'L');
-  // The church wall, cols 40 to 60, and a hedge past it.
-  c.rect(40, 1, 21, 4, 'K').rect(61, 1, 8, 4, 'H');
-  // The church gate stands in the road at the west end of the arena; the tractor at the east end.
-  c.rect(CHURCH_GATE.col, CHURCH_GATE.row, CHURCH_GATE.width, CHURCH_GATE.height, 'G');
-  c.rect(TRACTOR.col, TRACTOR.row, TRACTOR.width, TRACTOR.height, 'o');
+  // Feeney's, cols 2 to 14: lit windows, a wooden double door under the sign.
+  for (const col of [4, 5, 11, 12]) c.set(col, 3, 'w').set(col, 4, 'w');
+  c.rect(8, 4, 2, 1, 'D');
+  // The bookies, cols 16 to 24: dark shopfront, wooden door.
+  c.rect(17, 3, 2, 2, 'Y').rect(22, 3, 2, 2, 'Y');
+  c.set(20, 4, 'D');
+  // The alley between the bookies and the chipper (the bins are props).
+  c.rect(25, 1, 3, 4, 'p');
+  // The chipper, cols 28 to 39: lit shopfront, lit double door, warm ground in front.
+  c.rect(29, 3, 3, 2, 'X').rect(36, 3, 3, 2, 'X');
+  c.rect(33, 4, 2, 1, 'E');
+  c.rect(28, 5, 12, 1, 'L');
+  // The church wall, cols 40 to 60, with a roof above, and a hedge past it.
+  c.rect(40, 1, 21, 2, 'R').rect(40, 3, 21, 2, 'C').rect(61, 1, 8, 4, 'H');
   // The road out of town, east end.
-  c.rect(69, 10, 1, 3, 'p');
-  const exits: ExitDef[] = [{ id: 'c1.street.east', area: tilesArea(68, 10, 2, 3), toScreen: 'c1.road', spawn: ROAD_ARRIVAL, lockedUntil: ['c1.boss.bigtom'] }];
-  return c.build('c1.street', exits, STREET_ARRIVAL);
+  c.rect(69, 9, 1, 3, 'p');
+  const exits: ExitDef[] = [{ id: 'c1.street.east', area: tilesArea(68, 9, 2, 3), toScreen: 'c1.road', spawn: ROAD_ARRIVAL, lockedUntil: ['c1.boss.bigtom'] }];
+  const dressing: ScreenDressing = {
+    props: [
+      { frame: PROP.pubSign, col: 8, row: 3 },
+      { frame: PROP.bookiesSign, col: 19, row: 3 },
+      { frame: PROP.bins, col: 26, row: 3, solid: { width: 1, height: 1 } },
+      { frame: PROP.bins, col: 27, row: 3, solid: { width: 1, height: 1 } },
+      { frame: PROP.chipperSign, col: 33, row: 3 },
+      // The church gate stands across the west end of the arena, the tractor at the east end.
+      { frame: PROP.churchGate, col: CHURCH_GATE.col, row: CHURCH_GATE.row, solid: { width: CHURCH_GATE.width, height: CHURCH_GATE.height } },
+      { frame: PROP.tractor, col: TRACTOR.col, row: TRACTOR.row, solid: { width: TRACTOR.width, height: TRACTOR.height } },
+      // Big Tom folds his jacket on the church wall in phase 2.
+      { id: 'jacket', frame: PROP.foldedJacket, col: 56, row: 4, hidden: true },
+    ],
+    npcs: [
+      { id: 'queue1', npc: 'localA', col: 31, row: 5, facing: 'up' },
+      { id: 'queue2', npc: 'localB', col: 32, row: 5, facing: 'up' },
+      // The one who takes the last spice bag; the first lad takes his place when the fight starts.
+      { id: 'queue3', npc: 'localA', col: 33, row: 6, facing: 'up' },
+    ],
+  };
+  const ambient: ScreenAmbient = {
+    tint: 'navyDark',
+    strength: 0.5,
+    lights: [
+      { x: 34 * 16, y: 6 * 16, radius: 80, colour: 'amberLight', glow: 0.3 },
+      { x: 9 * 16, y: 5 * 16, radius: 36, colour: 'amber' },
+      { x: 18 * 16, y: 4 * 16, radius: 30, colour: 'amber' },
+      { x: 42 * 16, y: 8 * 16, radius: 56, colour: 'fog', glow: 0.12 },
+    ],
+  };
+  return c.build('c1.street', exits, STREET_ARRIVAL, { dressing, ambient });
 }
 
 // ---------------------------------------------------------------------------
@@ -193,12 +263,15 @@ export function streetScreen(): ScreenLayout {
 export function roadScreen(): ScreenLayout {
   const c = new Canvas(30, 17, 'b');
   c.rect(0, 0, 30, 1, '#').rect(0, 16, 30, 1, '#').rect(0, 0, 1, 17, '#').rect(29, 0, 1, 17, '#');
-  // Hedge and dark ground behind the north wall, the road, a low wall on the south side, then bog.
-  c.rect(1, 1, 28, 1, 'H').rect(1, 2, 28, 4, 'b');
+  // Hedge and night grass behind the north wall, the road, a low wall on the south side, then bog.
+  c.rect(1, 1, 28, 1, 'H').rect(1, 2, 28, 4, 'n');
   c.rect(1, 6, 28, 1, 'K').rect(14, 6, 2, 1, 'G');
   c.rect(1, 7, 28, 3, 'p');
   c.rect(1, 10, 28, 1, 'K');
   for (const [col, row] of [[4, 12], [5, 12], [11, 14], [12, 14], [12, 13], [19, 12], [20, 12], [20, 13], [25, 14], [26, 14]] as const) c.set(col, row, 'P');
   for (const [col, row] of [[8, 12], [16, 13], [22, 15], [3, 15], [27, 12]] as const) c.set(col, row, 'r');
-  return c.build('c1.road', [], ROAD_ARRIVAL);
+  const dressing: ScreenDressing = {
+    props: [{ id: 'bogLights', frame: PROP.bogLights[0], frames: PROP.bogLights, frameRate: 3, col: BOG_LIGHTS_START.col, row: BOG_LIGHTS_START.row, hidden: true }],
+  };
+  return c.build('c1.road', [], ROAD_ARRIVAL, { dressing, ambient: ROAD_DARK });
 }

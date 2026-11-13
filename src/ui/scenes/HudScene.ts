@@ -48,7 +48,6 @@ import { buildHudModel, perimeterSegments } from '../model/hud';
 import type { HudModel } from '../model/hud';
 import { wrapText } from '../model/wrap';
 import { bindPromptHost } from '../prompts';
-import { LIGHTS_SEQUENCE, SkyLights } from '../skyLights';
 import { PROMPT_EVENTS, UiSceneKeys } from '../shared';
 import type { UiShared } from '../shared';
 
@@ -88,7 +87,6 @@ export class HudScene extends Phaser.Scene {
   private slotBg: Phaser.GameObjects.Rectangle[] = [];
   private slotIcon: Pic[] = [];
   private slotLabel: Label[] = [];
-  private skyLights: SkyLights | null = null;
   private emptiesLabel!: Label;
   private specialIcon!: Pic;
   private specialLabel!: Label;
@@ -134,7 +132,6 @@ export class HudScene extends Phaser.Scene {
     const { source } = this.shared;
     bindFullscreenHotkey(this.game);
     bindPromptHost(this.game);
-    this.skyLights = new SkyLights(this, D.overlay + 1);
     this.queue = new DialogueQueue({
       lookup: (id) => sequence(id),
       speakerName: (line) => this.speakerName(line),
@@ -232,13 +229,7 @@ export class HudScene extends Phaser.Scene {
   private bindEvents(): void {
     const { bus } = this.shared.source;
     this.unsubs.push(
-      bus.on(GameEvents.DialogueShow, ({ sequenceId }) => {
-        this.queue.enqueue(sequenceId);
-        if (sequenceId === LIGHTS_SEQUENCE) this.skyLights?.start();
-      }),
-      bus.on(GameEvents.DialogueFinished, ({ sequenceId }) => {
-        if (sequenceId === LIGHTS_SEQUENCE) this.skyLights?.stop();
-      }),
+      bus.on(GameEvents.DialogueShow, ({ sequenceId }) => this.queue.enqueue(sequenceId)),
       bus.on(GameEvents.SaveWritten, () => this.flash(this.saved, NOTICE_MS.saved)),
       bus.on(GameEvents.AbilityUnlocked, ({ abilityId }) => {
         this.setNotice(this.ability, format('ability.unlocked', { name: text(`ability.${abilityId}.name`) }), NOTICE_MS.ability);
@@ -399,7 +390,6 @@ export class HudScene extends Phaser.Scene {
 
     if (!this.shared.overlays.isOpen('pause') && !this.shared.overlays.isOpen('casebook')) this.queue.update(delta);
     this.drawDialogue(this.queue.view());
-    this.skyLights?.update();
 
     const now = this.time.now;
     for (const n of [this.saved, this.ability, this.pickup]) {

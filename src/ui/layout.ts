@@ -32,8 +32,8 @@ export const DIALOGUE_TIMING = {
   charsPerSecond: 45,
   boxHoldBaseMs: 1400,
   boxHoldPerCharMs: 35,
-  captionHoldBaseMs: 2200,
-  captionHoldPerCharMs: 45,
+  captionHoldBaseMs: 1100,
+  captionHoldPerCharMs: 30,
 } as const;
 
 export const NOTICE_MS = { saved: 1600, pickup: 3200, ability: 3200 } as const;
