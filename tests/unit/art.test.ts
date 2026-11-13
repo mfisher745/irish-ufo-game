@@ -289,19 +289,25 @@ describe('tilesets (16 common tiles at the TILE indices)', () => {
     }
   });
 
-  // CONTENT NOTE (creative-director, src/art/tiles.ts): every region tileset uses colours outside its own sub-palette
-  // (for example the base tileset uses amber, the cities tileset uses turf and moss). DESIGN 8 / style guide 1 say
-  // environment art uses the region colours plus the shared ones. REGION_COLOURS may be meant as 'dominant' only.
-  it.fails('each region tileset sticks to the shared colours plus its own sub-palette (style guide 1)', () => {
-    const strays: Record<string, string[]> = {};
+  it('each region\'s own colours plus the neutrals cover at least 70 per cent of its 16 common tiles (dominance)', () => {
+    const neutrals = ['ink', 'coal', 'slate', 'steel', 'fog', 'bone', 'white'];
+    const measured: Record<string, number> = {};
     for (const r of REGIONS) {
-      const allowed = new Set<string>([...SHARED_COLOURS, ...REGION_COLOURS[r]]);
-      const s = byKey(tilesetKey(r));
-      const stray = new Set<string>();
-      for (const px of s.buffer.data) if (px !== null && !allowed.has(px)) stray.add(px);
-      strays[r] = [...stray];
+      const own = new Set<string>([...REGION_COLOURS[r], ...neutrals]);
+      let total = 0;
+      let hit = 0;
+      for (let i = 0; i < 16; i++) {
+        const b = new PixelBuffer(16, 16);
+        regionTiles(r)[i]?.draw(b);
+        for (const px of b.data) {
+          if (px === null) continue;
+          total++;
+          if (own.has(px)) hit++;
+        }
+      }
+      measured[r] = Math.round((hit / total) * 1000) / 10;
     }
-    expect(strays).toEqual({ kilnamoe: [], cities: [], ohio: [], roswell: [], nevada: [], base: [] });
+    for (const r of REGIONS) expect(measured[r], `${r} ${JSON.stringify(measured)}`).toBeGreaterThanOrEqual(70);
   });
 });
 

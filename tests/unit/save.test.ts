@@ -129,6 +129,12 @@ describe('chapter carry-over', () => {
     expect(carryOver(at(4), 'banjaxed', next(5)).player.hangover.active).toBe(true);
   });
 
+  it('Buzz goes back to 0 at every chapter start (README carry-over rules)', () => {
+    const s = at(2, { player: { ...fresh().player, buzz: 85 } });
+    expect(carryOver(s, 'banjaxed', next(3)).player.buzz).toBe(0);
+    expect(carryOver(at(4, { player: { ...fresh().player, buzz: 65 } }), 'locked', next(5)).player.buzz).toBe(0);
+  });
+
   it('abilities, empties, drinks, casebook and Myko calls carry', () => {
     const base = fresh();
     const s = at(4, {

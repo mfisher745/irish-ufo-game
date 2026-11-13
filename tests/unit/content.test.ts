@@ -254,9 +254,7 @@ describe('casebook text IDs (style guide 6)', () => {
     expect(missing).toEqual([]);
   });
 
-  // CONTENT NOTE (creative-director, src/content/dialogue/c03.ts:33-34): 'c3.clue.visitors.margin' (31 chars) is
-  // longer than its entry (24 chars); style guide 6 says margin notes are shorter than the entry.
-  it.fails('Myko margin notes are shorter than Andrew\'s entries', () => {
+  it('Myko margin notes are shorter than Andrew\'s entries', () => {
     const longer = allTextIds()
       .filter((id) => id.endsWith('.margin'))
       .filter((id) => {
