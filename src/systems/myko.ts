@@ -288,9 +288,10 @@ export class Myko {
   }
 
   private finishCall(target: CallTarget, sectionId: CompletableSectionId, kind: MykoCallKind): void {
-    target.completable.completeNow('myko');
+    // The post-call scene first, straight after the blackout; the section's own end lines queue behind it.
     const lines = this.host.callLines(kind);
     if (lines) this.host.play(lines.sequenceId);
+    target.completable.completeNow('myko');
     this.host.bus.emit(GameEvents.MykoCallFinished, { sectionId, kind });
     this.host.saveAfterCall();
   }
