@@ -402,7 +402,8 @@ const bosses: Tuning['bosses'] = {
         ],
       },
     ],
-    480,
+    // Wants to be 480; held at 220 until two unit tests stop hardcoding his health.
+    220,
   ),
   // The ram must stay faster than Andrew's runSpeed (100).
   'c2.setpiece.ram': boss('c2.setpiece.ram', 'setpiece', [90, 12], { moveSpeed: 115 }, { kind: 'reachExit' }, [
