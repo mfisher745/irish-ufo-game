@@ -193,6 +193,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   private readonly script: ChapterScript;
   private readonly scope: BusScope;
   private msSinceGrandOrAbove = 0;
+  private begun = false;
 
   constructor(private readonly opts: RunOptions) {
     const save = opts.save;
@@ -227,13 +228,23 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     this.wireBus();
 
     this.loadScreen(screen.id, save.respawn.position);
-    this.script.onStart?.({ checkpointId: save.checkpointId, resumed: opts.resumed });
-    if (opts.afterDeath) {
+  }
+
+  /**
+   * Runs once, on the first tick, so the HUD and audio (started with the
+   * scene) see the opening lines and events.
+   */
+  private begin(): void {
+    const save = this.opts.save;
+    this.script.onStart?.({ checkpointId: save.checkpointId, resumed: this.opts.resumed });
+    if (this.opts.afterDeath) {
       this.bus.emit(GameEvents.PlayerRespawned, { respawn: save.respawn });
       this.myko.comment('death', 'myko.death', true);
-    } else if (!opts.resumed && this.player.hangover.active) {
+    } else if (!this.opts.resumed && this.player.hangover.active) {
       this.myko.comment('hangover', 'myko.hangover', true);
     }
+    const region = this.module.def.screens.find((x) => x.id === this.screen.id)?.region;
+    if (region) this.bus.emit(GameEvents.ScreenEntered, { screenId: this.screen.id, region });
   }
 
   // -------------------------------------------------------------------------
@@ -360,6 +371,10 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
 
   tick(dtMs: number, input: InputFrame): void {
     if (this.ended) return;
+    if (!this.begun) {
+      this.begun = true;
+      this.begin();
+    }
     this.clock += dtMs;
     for (const f of this.fx) f.ttlMs -= dtMs;
     while (this.fx.length > 0 && (this.fx[0]?.ttlMs ?? 1) <= 0) this.fx.shift();
