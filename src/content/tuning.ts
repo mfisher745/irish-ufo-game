@@ -13,9 +13,11 @@ import type {
   BossDef,
   BuzzStateEffects,
   DrinkDef,
+  DrinkId,
   EnemyDef,
   FightDef,
   FoodDef,
+  LootEntry,
   Tuning,
   WaveDef,
 } from '../core/types';
@@ -683,12 +685,22 @@ const fights: Tuning['fights'] = Object.fromEntries([
 // Root
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Breakable loot helpers
+// ---------------------------------------------------------------------------
+
+const loot = (item: LootEntry['item'], weight: number): LootEntry => ({ item, weight });
+const drinkItem = (drinkId: DrinkId): LootEntry['item'] => ({ kind: 'drink', drinkId, count: 1 });
+const crisps: LootEntry['item'] = { kind: 'food', foodId: 'crisps' };
+const anEmpty: LootEntry['item'] = { kind: 'empties', count: 1 };
+
 export const TUNING: Tuning = {
   audioDefaults: { musicVolume: 0.7, effectsVolume: 0.8 },
   buzz: {
     max: 100,
     thresholds: { grand: 20, locked: 60, banjaxed: 90 },
     drainPerSecond: 0.6,
+    drainDelayAfterDrinkMs: 12000,
     effects: { sober, grand, locked, banjaxed },
     banjaxedPeakMs: 8000,
     banjaxedFallenMs: 2000,
@@ -765,6 +777,7 @@ export const TUNING: Tuning = {
   myko: {
     callsPerGame: 3,
     callHoldMs: 1000,
+    // Deprecated and unused (the call-in is a blackout now); delete with MykoTuning.fightClearMs.
     fightClearMs: 3000,
     idleCommentMs: 45000,
     ohioTangentShare: 0.66,
@@ -775,12 +788,31 @@ export const TUNING: Tuning = {
     drinkCommentChance: 0.35,
     heatWarnFraction: 0.75,
     tangentChance: 0.5,
+    commentStaleMs: 6000,
+    blackoutTimeoutMs: 8000,
+    smokeIntervalMs: 60000,
+    smokeJitterMs: 8000,
   },
   investigation: {
     interactRadius: 20,
   },
   chapterSelect: {
     startingDrinks: [{ drinkId: 'stout', count: 3 }, null, null],
+  },
+  // Roughly 45% drink, 20% food, 15% an empty, 20% nothing in every region.
+  breakables: {
+    defaultHits: 1,
+    noiseRadius: 72,
+    hitFlashMs: 100,
+    loot: {
+      kilnamoe: [loot(drinkItem('stout'), 30), loot(drinkItem('whiskey'), 15), loot(crisps, 20), loot(anEmpty, 15), loot(null, 20)],
+      cities: [loot(drinkItem('lightBeer'), 20), loot(drinkItem('bourbon'), 10), loot(drinkItem('craftIpa'), 15), loot(crisps, 20), loot(anEmpty, 15), loot(null, 20)],
+      ohio: [loot(drinkItem('lightBeer'), 30), loot(drinkItem('bourbon'), 15), loot(crisps, 20), loot(anEmpty, 15), loot(null, 20)],
+      roswell: [loot(drinkItem('tequila'), 20), loot(drinkItem('lightBeer'), 25), loot(crisps, 20), loot(anEmpty, 15), loot(null, 20)],
+      nevada: [loot(drinkItem('water'), 25), loot(drinkItem('bourbon'), 20), loot(crisps, 20), loot(anEmpty, 15), loot(null, 20)],
+      // Tea is not carried, so the base drops light beer.
+      base: [loot(drinkItem('lightBeer'), 45), loot(crisps, 20), loot(anEmpty, 15), loot(null, 20)],
+    },
   },
   drinks: {
     stout: drink('stout', [

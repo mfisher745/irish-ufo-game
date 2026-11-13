@@ -2,13 +2,20 @@
  * Run-time state of a chapter's set dressing (props and standing NPCs) and
  * screen ambience. Plain TypeScript: the run asks it for the collision and
  * sight grid with solid props merged in, and for talk spots; the view reads
- * it to draw. Changes made by a script last for the run only.
+ * it to draw. Changes made by a script last for the run only, except that
+ * broken breakables are passed in from the save (DESIGN.md 7.1 "Breakables").
  */
 
 import type { NpcId } from '../art/cast';
+import { PROP } from '../art/props';
 import type { NpcPlacement, PropPlacement, ScreenAmbient, ScreenLayout, TileFootprint } from '../core/chapter';
-import type { ExaminableDef, Facing, ScreenId, TileGrid, Vec2 } from '../core/types';
+import type { Random } from '../core/random';
+import type { ExaminableDef, Facing, LootEntry, PickupItem, ScreenId, TileGrid, Vec2 } from '../core/types';
+import type { Rect } from './geometry';
 import { TILE, tileCentre } from './grid';
+
+/** Debris frame when a breakable gives none. */
+export const DEFAULT_DEBRIS_FRAME: string = PROP.debris[0];
 
 export interface LiveProp {
   /** `PropPlacement.id`, or a generated key for unnamed props. */
@@ -20,6 +27,11 @@ export interface LiveProp {
   frame: string;
   frames: readonly string[];
   visible: boolean;
+  /** Breakables: hits left before it breaks (0 once broken). */
+  hitsLeft: number;
+  broken: boolean;
+  /** Time left on the white hit flash, for the view. */
+  flashMs: number;
 }
 
 export interface LiveNpc {
@@ -50,11 +62,29 @@ export class Dressing {
   /** Bumped on every change; the view and the grid cache compare it. */
   version = 0;
 
-  constructor(screens: readonly ScreenLayout[]) {
+  /**
+   * @param brokenKeys breakables already broken in this save.
+   * @param defaultHits hits a breakable takes when its placement gives none.
+   */
+  constructor(screens: readonly ScreenLayout[], brokenKeys: Iterable<string> = [], defaultHits = 1) {
+    const broken = new Set(brokenKeys);
     for (const s of screens) {
       (s.dressing?.props ?? []).forEach((def, i) => {
         const key = def.id ?? `${s.id}#prop${i}`;
-        this.props.set(key, { key, def, screenId: s.id, col: def.col, row: def.row, frame: def.frame, frames: def.frames ?? [], visible: def.hidden !== true });
+        const isBroken = def.breakable !== undefined && broken.has(key);
+        this.props.set(key, {
+          key,
+          def,
+          screenId: s.id,
+          col: def.col,
+          row: def.row,
+          frame: isBroken ? debrisFrame(def) : def.frame,
+          frames: isBroken ? [] : (def.frames ?? []),
+          visible: def.hidden !== true,
+          hitsLeft: def.breakable ? (isBroken ? 0 : Math.max(1, def.breakable.hits ?? defaultHits)) : 0,
+          broken: isBroken,
+          flashMs: 0,
+        });
       });
       (s.dressing?.npcs ?? []).forEach((def, i) => {
         const key = def.id ?? `${s.id}#npc${i}`;
@@ -132,6 +162,47 @@ export class Dressing {
   }
 
   // -------------------------------------------------------------------------
+  // Breakables
+  // -------------------------------------------------------------------------
+
+  /** Visible, unbroken breakables on a screen. */
+  breakablesOn(screenId: ScreenId): LiveProp[] {
+    return this.propsOn(screenId).filter((p) => p.def.breakable !== undefined && p.visible && !p.broken);
+  }
+
+  /** Keys of every broken breakable, for the save. */
+  brokenKeys(): string[] {
+    return [...this.props.values()].filter((p) => p.broken).map((p) => p.key);
+  }
+
+  /**
+   * One hit on a breakable: flashes it, and on the last hit breaks it (debris
+   * frame, no animation, no longer solid). Returns what happened.
+   */
+  hitProp(key: string, flashMs: number): 'hit' | 'broken' | null {
+    const p = this.props.get(key);
+    if (!p || !p.def.breakable || p.broken || !p.visible) return null;
+    p.hitsLeft = Math.max(0, p.hitsLeft - 1);
+    p.flashMs = flashMs;
+    if (p.hitsLeft === 0) {
+      p.broken = true;
+      p.frame = debrisFrame(p.def);
+      p.frames = [];
+    }
+    this.version++;
+    return p.broken ? 'broken' : 'hit';
+  }
+
+  /** Counts down hit flashes. */
+  tick(dtMs: number): void {
+    for (const p of this.props.values()) {
+      if (p.flashMs <= 0) continue;
+      p.flashMs = Math.max(0, p.flashMs - dtMs);
+      if (p.flashMs === 0) this.version++;
+    }
+  }
+
+  // -------------------------------------------------------------------------
   // Queries for the run
   // -------------------------------------------------------------------------
 
@@ -140,7 +211,7 @@ export class Dressing {
     const cached = this.grids.get(layout.id);
     if (cached && cached.version === this.version) return cached.grid;
     const base = layout.grid;
-    const props = this.propsOn(layout.id).filter((p) => p.visible && (p.def.solid || p.def.blocksSight));
+    const props = this.propsOn(layout.id).filter((p) => p.visible && !p.broken && (p.def.solid || p.def.blocksSight));
     const npcs = this.npcsOn(layout.id).filter((n) => n.visible && n.def.solid === true);
     let grid = base;
     if (props.length > 0 || npcs.length > 0) {
@@ -215,4 +286,36 @@ export class Dressing {
 /** Bottom edge (feet) of a prop in pixels, for depth sorting: `row * TILE + frame height`. */
 export function propFeetY(p: Pick<LiveProp, 'row'>, frameHeight: number): number {
   return p.row * TILE + frameHeight;
+}
+
+function debrisFrame(def: PropPlacement): string {
+  return def.breakable?.debrisFrame ?? DEFAULT_DEBRIS_FRAME;
+}
+
+/** The area a breakable is hit in: its `solid` footprint, or its top-left tile. Pixels. */
+export function propHitRect(p: Pick<LiveProp, 'col' | 'row' | 'def'>): Rect {
+  const fp = p.def.solid ?? { width: 1, height: 1 };
+  return { x: (p.col + (fp.dx ?? 0)) * TILE, y: (p.row + (fp.dy ?? 0)) * TILE, width: fp.width * TILE, height: fp.height * TILE };
+}
+
+/** A stable 32-bit hash of a string (FNV-1a), for per-prop loot seeds. */
+export function hashKey(key: string): number {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) {
+    h ^= key.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return h >>> 0;
+}
+
+/** Weighted pick from a loot table; null for "nothing" or an empty table. */
+export function pickLoot(table: readonly LootEntry[], rng: Random): PickupItem | null {
+  const total = table.reduce((n, e) => n + Math.max(0, e.weight), 0);
+  if (total <= 0) return null;
+  let roll = rng.next() * total;
+  for (const e of table) {
+    roll -= Math.max(0, e.weight);
+    if (roll < 0) return e.item;
+  }
+  return table[table.length - 1]?.item ?? null;
 }

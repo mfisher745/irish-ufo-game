@@ -73,6 +73,12 @@ export function isSaveState(v: unknown): v is SaveState {
     if (!Array.isArray(v[key])) return false;
   }
   if (!isObject(v['hintsGiven']) || !isObject(v['flags'])) return false;
+  // Optional fields added after version 1 (older saves simply lack them).
+  for (const key of ['playedDialogue', 'brokenProps']) {
+    const list = v[key];
+    if (list !== undefined && (!Array.isArray(list) || list.some((x) => typeof x !== 'string'))) return false;
+  }
+  if (v['lootSeed'] !== undefined && typeof v['lootSeed'] !== 'number') return false;
   return true;
 }
 

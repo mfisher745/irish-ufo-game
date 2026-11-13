@@ -150,6 +150,9 @@ export function chapterSelectSave(module: ChapterModule, existing: SaveState | n
     completedSectionIds: base.completedSectionIds.filter((id) => chapterOf(id) < n),
     collectedPickupIds: [],
     flags: Object.fromEntries(Object.entries(base.flags).filter(([k]) => chapterOf(k) < n)),
+    // Lines of this and later chapters may play again; earlier chapters' and shared lines stay played.
+    playedDialogue: (base.playedDialogue ?? []).filter((id) => chapterOf(id) < n),
+    brokenProps: (base.brokenProps ?? []).filter((k) => chapterOf(k) < n),
   });
 }
 
@@ -223,7 +226,9 @@ export class GameSession {
     this.store.clear();
     const module = this.moduleFor(1);
     if (!module) return;
-    const save = saveAtChapterStart(module.module, emptyProgress());
+    // Fixed for the life of the save, so a breakable always drops the same thing in it.
+    const lootSeed = Math.floor(this.rng.next() * 0x7fffffff);
+    const save = saveAtChapterStart(module.module, { ...emptyProgress(), lootSeed });
     module.store.write(save);
     this.begin({ module: module.module, save, resumed: false, afterDeath: false, store: module.store });
   }
@@ -278,6 +283,10 @@ export class GameSession {
       onDeath: () => this.onDeath(),
       onChapterComplete: (endState, snap) => this.onChapterComplete(endState, snap),
       playEffect: (id) => this.playEffect?.(id),
+      patchSave: (patch) => {
+        const cur = p.store.load();
+        if (cur) p.store.write(patch(cur));
+      },
     });
     this.current = run;
     this.bus.emit(GameEvents.ChapterStarted, { chapter: p.module.def.number });
@@ -435,7 +444,7 @@ export function createUiState(session: GameSession) {
       return run()?.submitDeduction(id, evidence) ?? false;
     },
     dialogueFinished(sequenceId: DialogueId): void {
-      run()?.dialogue.finished(sequenceId);
+      run()?.dialogueFinished(sequenceId);
     },
     save(): SaveState | null {
       return session.store.load();

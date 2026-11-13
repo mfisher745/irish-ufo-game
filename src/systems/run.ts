@@ -28,6 +28,7 @@ import type {
 } from '../core/chapter';
 import { BusScope } from '../core/events';
 import type { Random } from '../core/random';
+import { seededRandom } from '../core/random';
 import { GameEvents } from '../core/types';
 import type {
   AbilityId,
@@ -79,13 +80,13 @@ import { BossRunner } from './boss';
 import { knockbackVector, scaledDamage, shapeHits, shapeHitsRect } from './combat';
 import { buzzStateRank } from './buzz';
 import { DialogueRunner } from './dialogue';
-import { Dressing } from './dressing';
-import type { InteractPoint } from './dressing';
+import { Dressing, hashKey, pickLoot, propHitRect } from './dressing';
+import type { InteractPoint, LiveProp } from './dressing';
 import type { DialogueLookup } from './dialogue';
 import { EnemyActor, statsFromDef } from './enemies';
 import type { ActorStats, CombatWorld } from './enemies';
 import { FightRunner } from './fight';
-import { distance, rectContains } from './geometry';
+import { add, distance, normalize, rectContains, scale } from './geometry';
 import { isShade } from './grid';
 import { Casebook, DeductionBoard, PuzzleBase } from './investigation';
 import { applyConsumable, isAlcoholic, wouldHaveEffect } from './inventory';
@@ -135,6 +136,12 @@ export interface RunOptions {
   readonly onChapterComplete: (endState: BuzzState, snapshot: SaveState) => void;
   /** Sound effects with no bus event (door, push, deflect). */
   readonly playEffect?: (id: RunEffect) => void;
+  /**
+   * Changes the stored save in place without a full save (no new respawn, no
+   * player snapshot): used for things that must survive a death before the
+   * next checkpoint, namely played dialogue and broken props.
+   */
+  readonly patchSave?: (patch: (state: SaveState) => SaveState) => void;
 }
 
 interface SectionEntry {
@@ -196,6 +203,8 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   private footstepMs = 0;
   private defeatedEmitted = new Set<string>();
   private meleeHooks: { readonly area: AreaRect; readonly screenId: ScreenId; readonly callback: (hit: MeleeHitInfo) => void }[] = [];
+  private timers: { at: number; readonly everyMs: number | null; readonly fn: () => void }[] = [];
+  private readonly lootSeed: number;
 
   // State
   private objectiveId: ObjectiveId | null = null;
@@ -227,10 +236,20 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     this.reachedCheckpoints.add(save.checkpointId);
 
     this.player = new Player(this.bus, save.player);
-    this.dialogue = new DialogueRunner(this.bus, opts.dialogue);
+    this.dialogue = new DialogueRunner(this.bus, opts.dialogue, {
+      played: save.playedDialogue ?? [],
+      context: {
+        clock: () => this.clock,
+        screenId: () => this.screen.id,
+        sectionId: () => this.currentSection,
+        isComplete: (id) => this.completed.has(id as SectionId),
+        staleMs: TUNING.myko.commentStaleMs,
+      },
+    });
+    this.lootSeed = save.lootSeed ?? 0;
     this.casebook = new Casebook(this.bus, save.casebook);
     this.myko = new Myko(this.mykoHost());
-    this.dressing = new Dressing(this.module.screens);
+    this.dressing = new Dressing(this.module.screens, save.brokenProps ?? [], TUNING.breakables.defaultHits);
 
     const screen = this.layout(save.respawn.screenId) ?? this.layout(this.module.def.startScreenId) ?? this.module.screens[0];
     if (!screen) throw new Error(`Chapter ${this.chapter} has no screens`);
@@ -287,7 +306,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
 
   /** Gameplay is paused by a scripted scene. */
   get sceneBlocking(): boolean {
-    return this.dialogue.blocking;
+    return this.dialogue.blocking || this.myko.callInProgress;
   }
 
   enemies(): readonly EnemyActor[] {
@@ -392,11 +411,15 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       casebook: [...this.casebook.entries()],
       hintsGiven: { ...this.hints },
       flags: { ...this.flags },
+      playedDialogue: this.dialogue.playedIds(),
+      brokenProps: this.dressing.brokenKeys(),
+      lootSeed: this.lootSeed,
     };
   }
 
   dispose(): void {
     this.meleeHooks = [];
+    this.timers = [];
     this.script.dispose?.();
     this.scope.dispose();
     this.dialogue.clear();
@@ -415,6 +438,11 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     this.clock += dtMs;
     for (const f of this.fx) f.ttlMs -= dtMs;
     while (this.fx.length > 0 && (this.fx[0]?.ttlMs ?? 1) <= 0) this.fx.shift();
+    this.dressing.tick(dtMs);
+    this.dialogue.dropStale();
+    // Script timers keep running through scenes and the blackout.
+    this.tickTimers();
+    if (this.ended) return;
 
     if (this.deathTimer >= 0) {
       this.deathTimer -= dtMs;
@@ -422,6 +450,11 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
         this.ended = true;
         this.opts.onDeath();
       }
+      return;
+    }
+    // The call-in blackout pauses gameplay until the UI reports it finished (or it times out).
+    if (this.myko.callInProgress) {
+      this.myko.tickCall(dtMs);
       return;
     }
     if (this.dialogue.blocking) return;
@@ -571,8 +604,8 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   // ChapterContext
   // -------------------------------------------------------------------------
 
-  say(id: DialogueId): Promise<void> {
-    return this.dialogue.play(id);
+  say(id: DialogueId, opts?: { readonly repeat?: boolean }): Promise<void> {
+    return this.dialogue.play(id, opts);
   }
 
   setObjective(id: ObjectiveId | null): void {
@@ -805,6 +838,38 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     this.dressing.setAmbient(screenId, ambient);
   }
 
+  after(ms: number, fn: () => void): () => void {
+    return this.addTimer(ms, null, fn);
+  }
+
+  every(ms: number, fn: () => void): () => void {
+    return this.addTimer(ms, Math.max(1, ms), fn);
+  }
+
+  /** The UI finished showing a sequence: the call-in blackout, or a dialogue sequence. */
+  dialogueFinished(sequenceId: DialogueId): void {
+    if (this.myko.blackoutFinished(sequenceId)) return;
+    this.dialogue.finished(sequenceId);
+  }
+
+  private addTimer(ms: number, everyMs: number | null, fn: () => void): () => void {
+    const t = { at: this.clock + Math.max(0, ms), everyMs, fn };
+    this.timers.push(t);
+    return () => {
+      this.timers = this.timers.filter((x) => x !== t);
+    };
+  }
+
+  private tickTimers(): void {
+    for (const t of [...this.timers]) {
+      if (this.ended) return;
+      if (!this.timers.includes(t) || t.at > this.clock) continue;
+      if (t.everyMs === null) this.timers = this.timers.filter((x) => x !== t);
+      else t.at += t.everyMs;
+      t.fn();
+    }
+  }
+
   onMeleeHit(area: AreaRect, callback: (hit: MeleeHitInfo) => void, screenId: ScreenId = this.screen.id): () => void {
     const hook = { area, screenId, callback };
     this.meleeHooks.push(hook);
@@ -890,7 +955,8 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     }
     const board = m.def.deductionBoard;
     if (board) {
-      this.deduction = new DeductionBoard(board, this.casebook, this, { say: (id) => void this.say(id) }, this.sectionReward(board.id));
+      // Wrong-answer lines answer the player's own submission, so they may repeat.
+      this.deduction = new DeductionBoard(board, this.casebook, this, { say: (id) => void this.say(id, { repeat: true }) }, this.sectionReward(board.id));
       if (this.completed.has(board.id)) this.deduction.restoreComplete();
       const d = this.deduction;
       this.sections.set(board.id, { completable: d, kind: 'deduction', screenId: null, entrance: null, start: () => d.openBoard() });
@@ -995,7 +1061,8 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     runner.adopt(guards.map((g) => this.spawnEnemy(g.enemyId, g.pos)));
     this.currentSection = fightId;
     runner.start();
-    void this.say('myko.caught');
+    // Shared system lines for every stealth section (not tied to a place), so they may repeat.
+    void this.say('myko.caught', { repeat: true });
     this.script.onSectionStarted?.(fightId);
   }
 
@@ -1005,7 +1072,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     if (r?.kind === 'pickup') this.give(r.item);
     if (r?.kind === 'clue') this.addEvidence(r.clueId);
     this.bus.emit(GameEvents.StealthCleanRun, { sectionId: def.id });
-    void this.say('myko.cleanRun');
+    void this.say('myko.cleanRun', { repeat: true });
     this.markCompleted(def.id, 'stealth', 'player');
   }
 
@@ -1013,7 +1080,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     return {
       bus: this.bus,
       rng: this.rng,
-      play: (id) => void this.say(id),
+      play: (id, repeat) => void this.say(id, { repeat: repeat === true }),
       pool: (id) => this.opts.pool(id),
       chapter: () => this.chapter,
       callTarget: () => this.callTarget(),
@@ -1078,6 +1145,60 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     return this.stealthHere().flatMap((s) => s.runner.def.hidingProps);
   }
 
+  /** A player projectile touching a breakable breaks it (straight shots stop, as they do on a wall). */
+  private projectileBreaks(proj: Projectile, before: Vec2, dtMs: number): void {
+    const radius = proj.shape.lobbed ? TUNING.combat.lobSplashRadius : TUNING.combat.projectileRadius;
+    // Where it was heading this tick: a solid breakable stops a straight shot one step short of it.
+    const ahead = add(before, scale(normalize(proj.vel), (proj.shape.speed * dtMs) / 1000));
+    for (const prop of this.dressing.breakablesOn(this.screen.id)) {
+      if (proj.hit.has(prop.key)) continue;
+      const r = propHitRect(prop);
+      const grown = { x: r.x - radius, y: r.y - radius, width: r.width + radius * 2, height: r.height + radius * 2 };
+      if (!rectContains(grown, proj.pos) && (proj.shape.lobbed || !rectContains(grown, ahead))) continue;
+      proj.hit.add(prop.key);
+      this.hitBreakable(prop);
+      if (!proj.shape.lobbed) {
+        if (proj.pierceLeft <= 0) proj.done = true;
+        else proj.pierceLeft--;
+      }
+      if (proj.done) return;
+    }
+  }
+
+  /** One hit on a breakable; on breaking: debris, loot, noise, `prop:broken`, and the save remembers it. */
+  private hitBreakable(prop: LiveProp): void {
+    const frame = prop.frame;
+    const res = this.dressing.hitProp(prop.key, TUNING.breakables.hitFlashMs);
+    if (res !== 'broken') return;
+    const centre = this.propCentre(prop);
+    this.dropLoot(prop, centre);
+    this.emitNoise({ kind: 'breakable', position: centre, radius: TUNING.breakables.noiseRadius });
+    this.bus.emit(GameEvents.PropBroken, { screenId: prop.screenId, propId: prop.key, frame });
+    const key = prop.key;
+    this.opts.patchSave?.((s) => ((s.brokenProps ?? []).includes(key) ? s : { ...s, brokenProps: [...(s.brokenProps ?? []), key] }));
+  }
+
+  private propCentre(prop: LiveProp): Vec2 {
+    const r = propHitRect(prop);
+    return { x: r.x + r.width / 2, y: r.y + r.height / 2 };
+  }
+
+  /** The loot a breakable drops: fixed by the placement, or from the region's table with a seed from the save and the prop. */
+  private lootOf(prop: LiveProp): PickupItem | null {
+    const loot = prop.def.breakable?.loot ?? 'table';
+    if (loot === 'none') return null;
+    if (loot !== 'table') return loot;
+    const region = this.module.def.screens.find((s) => s.id === prop.screenId)?.region ?? 'kilnamoe';
+    return pickLoot(TUNING.breakables.loot[region], seededRandom((hashKey(prop.key) ^ this.lootSeed) >>> 0));
+  }
+
+  private dropLoot(prop: LiveProp, at: Vec2): void {
+    const id = lootPickupId(prop.key);
+    if (this.collected.has(id)) return;
+    const item = this.lootOf(prop);
+    if (item) this.spawnPickup({ id, item, screenId: prop.screenId, position: at });
+  }
+
   private loadScreen(id: ScreenId, spawn: Vec2): void {
     const layout = this.layout(id);
     if (!layout) return;
@@ -1089,6 +1210,8 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     for (const p of this.module.pickups) {
       if (p.screenId === id && !this.collected.has(p.id)) this.pickupsLive.set(p.id, { def: p, item: p.item });
     }
+    // Loot of props broken earlier that was never picked up.
+    for (const prop of this.dressing.propsOn(id)) if (prop.broken) this.dropLoot(prop, this.propCentre(prop));
     this.player.pos = spawn;
     // Value comparison: a spawn read back from a save on Continue is a copy, not the layout's object.
     const atStart = spawn.x === layout.playerStart.x && spawn.y === layout.playerStart.y;
@@ -1186,6 +1309,9 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     for (const h of [...this.meleeHooks]) {
       if (h.screenId === this.screen.id && shapeHitsRect(a.shape, p.pos, p.aimDeg, h.area)) h.callback(info);
     }
+    for (const prop of this.dressing.breakablesOn(this.screen.id)) {
+      if (shapeHitsRect(a.shape, p.pos, p.aimDeg, propHitRect(prop))) this.hitBreakable(prop);
+    }
   }
 
   private alarmGuardsHit(shape: AttackShape, angle: number): void {
@@ -1231,8 +1357,10 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     const p = this.player;
     for (const proj of this.projectileList) {
       if (proj.done) continue;
+      const before = proj.pos;
       const landedNow = stepProjectile(proj, this.grid, dtMs);
       const checkHits = !proj.shape.lobbed || landedNow;
+      if (checkHits && proj.owner === 'player') this.projectileBreaks(proj, before, dtMs);
       if (checkHits && proj.owner === 'player') {
         for (const actor of this.actorList) {
           if (actor.down || proj.hit.has(actor.instanceId) || !projectileTouches(proj, actor.pos, r)) continue;
@@ -1279,7 +1407,8 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
     if (this.script.onExamine?.(target.examinableId) === true) return;
     const best = this.module.examinables.find((e) => e.id === target.examinableId);
     if (!best) return;
-    if (best.dialogueId) void this.say(best.dialogueId);
+    // Examining again replays the object's line (DESIGN.md 7.5).
+    if (best.dialogueId) void this.say(best.dialogueId, { repeat: true });
     if (best.evidenceId) this.addEvidence(best.evidenceId);
     if (best.item) this.give(best.item);
     if (this.module.deduction?.examinableId === best.id) this.openDeduction();
@@ -1390,6 +1519,10 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   }
 
   private wireBus(): void {
+    this.scope.on(GameEvents.DialogueShow, ({ sequenceId }) => {
+      if (!this.dialogue.hasPlayed(sequenceId)) return;
+      this.opts.patchSave?.((s) => ((s.playedDialogue ?? []).includes(sequenceId) ? s : { ...s, playedDialogue: [...(s.playedDialogue ?? []), sequenceId] }));
+    });
     this.scope.on(GameEvents.BuzzBanjaxedPhase, ({ phase }) => {
       if (phase === 'fallen') this.myko.comment('drink', 'myko.banjaxed', true);
     });
@@ -1398,7 +1531,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
         const line = this.opts.pool('andrew.sober');
         const pickIdx = Math.floor(this.rng.next() * line.length);
         const id = line[pickIdx];
-        if (id) void this.say(id);
+        if (id) void this.say(id, { repeat: true });
         this.msSinceGrandOrAbove = 0;
       }
     });
@@ -1411,4 +1544,9 @@ function lockedInput(input: InputFrame): InputFrame {
   const filter = (s: ReadonlySet<import('../core/types').InputAction>) =>
     new Set([...s].filter((a) => (keep as ReadonlySet<string>).has(a)));
   return { ...input, move: { x: 0, y: 0 }, held: filter(input.held), pressed: filter(input.pressed), released: filter(input.released) };
+}
+
+/** Pickup ID of a breakable's loot (collected like any other pickup). */
+export function lootPickupId(propKey: string): PickupId {
+  return `break.${propKey}`;
 }
