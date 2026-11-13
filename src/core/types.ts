@@ -1046,7 +1046,11 @@ export interface ScreenDef {
   readonly region: RegionId;
   readonly widthTiles: number;
   readonly heightTiles: number;
-  /** Location card caption, if this screen shows one. */
+  /**
+   * @deprecated Ignored: no system shows location cards. Chapters play their
+   * `cN.caption.*` caption sequences with `ctx.say` instead. To be removed once
+   * chapter 1 stops setting it.
+   */
   readonly locationCardTextId?: TextId;
 }
 

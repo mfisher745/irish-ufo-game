@@ -12,8 +12,14 @@ import type { EnemyActor } from '../enemies';
 import { facingFromAngle, fromAngle, toRad } from '../geometry';
 import { TILE } from '../grid';
 import type { ChapterRun } from '../run';
+import { DressingView } from './dressingView';
 
 type Body = Phaser.GameObjects.Sprite | Phaser.GameObjects.Rectangle;
+
+interface KeyedBody {
+  readonly body: Body;
+  readonly textureKey: string;
+}
 
 const CONE_ALPHA = 0.4;
 
@@ -21,7 +27,8 @@ export class WorldView {
   private staticLayer: Phaser.GameObjects.Graphics | null = null;
   private tileImages: Phaser.GameObjects.Image[] = [];
   private readonly g: Phaser.GameObjects.Graphics;
-  private readonly bodies = new Map<string, Body>();
+  private readonly bodies = new Map<string, KeyedBody>();
+  private readonly dressing: DressingView;
   private screenId = '';
   readonly playerBody: Body;
   private readonly mykoBody: Body;
@@ -33,6 +40,7 @@ export class WorldView {
     this.g = scene.add.graphics().setDepth(10000);
     this.playerBody = this.makeBody(TEX.andrew, 16, 24, PALETTE.anorak);
     this.mykoBody = this.makeBody(TEX.myko, 16, 32, PALETTE.mykoCoat);
+    this.dressing = new DressingView(scene, run);
     this.buildScreen();
   }
 
@@ -51,8 +59,8 @@ export class WorldView {
     const seen = new Set<string>();
     for (const a of r.enemies()) {
       seen.add(a.instanceId);
-      const body = this.bodyFor(a.instanceId, a.stats.spriteKey, 16, 22, this.enemyColour(a));
-      this.place(body, a.pos, a.stats.spriteKey, a.down ? 'down' : a.status === 'telegraphing' ? 'telegraph' : 'walk', facingFromAngle(a.facingDeg));
+      const body = this.bodyFor(a.instanceId, a.spriteKey, 16, 22, this.enemyColour(a));
+      this.place(body, a.pos, a.spriteKey, a.down ? 'down' : a.status === 'telegraphing' ? 'telegraph' : 'walk', facingFromAngle(a.facingDeg));
       if (body instanceof Phaser.GameObjects.Rectangle) {
         body.setFillStyle(a.down ? PALETTE.coal : a.status === 'telegraphing' ? PALETTE.alarm : a.disguised ? PALETTE.lime : this.enemyColour(a));
         body.setAlpha(a.down ? 0.5 : 1);
@@ -64,20 +72,22 @@ export class WorldView {
       const body = this.bodyFor(gd.instanceId, key, 16, 22, PALETTE.navy);
       this.place(body, gd.pos, key, 'walk', facingFromAngle(gd.facingDeg));
     }
-    for (const [id, body] of this.bodies) {
+    for (const [id, kb] of this.bodies) {
       if (!seen.has(id)) {
-        body.destroy();
+        kb.body.destroy();
         this.bodies.delete(id);
       }
     }
+    this.dressing.sync();
     this.drawDynamic();
   }
 
   destroy(): void {
     this.staticLayer?.destroy();
     for (const t of this.tileImages) t.destroy();
-    for (const b of this.bodies.values()) b.destroy();
+    for (const b of this.bodies.values()) b.body.destroy();
     this.bodies.clear();
+    this.dressing.destroy();
     this.g.destroy();
     this.playerBody.destroy();
     this.mykoBody.destroy();
@@ -91,7 +101,7 @@ export class WorldView {
     this.staticLayer?.destroy();
     for (const t of this.tileImages) t.destroy();
     this.tileImages = [];
-    for (const b of this.bodies.values()) b.destroy();
+    for (const b of this.bodies.values()) b.body.destroy();
     this.bodies.clear();
 
     const grid = layout.grid;
@@ -117,7 +127,14 @@ export class WorldView {
       }
     }
     for (const ex of layout.exits) g.fillStyle(PALETTE.amberLight, 0.6).fillRect(ex.area.x, ex.area.y, ex.area.width, ex.area.height);
-    this.scene.cameras.main.setBounds(0, 0, grid.widthTiles * TILE, grid.heightTiles * TILE);
+    // A screen smaller than the view is centred; the camera background (the void tile's ink) fills the rest.
+    const cam = this.scene.cameras.main;
+    const w = grid.widthTiles * TILE;
+    const h = grid.heightTiles * TILE;
+    const bx = w < cam.width ? -Math.floor((cam.width - w) / 2) : 0;
+    const by = h < cam.height ? -Math.floor((cam.height - h) / 2) : 0;
+    cam.setBackgroundColor(PALETTE.ink);
+    cam.setBounds(bx, by, Math.max(w, cam.width), Math.max(h, cam.height));
   }
 
   private drawDynamic(): void {
@@ -271,13 +288,14 @@ export class WorldView {
     return a.enemyId === 'suit' || a.enemyId === 'agent' ? PALETTE.navy : PALETTE.brick;
   }
 
+  /** The body for an actor; rebuilt when its texture changes (`BossRunner.setSprite`). */
   private bodyFor(id: string, textureKey: string, w: number, h: number, colour: number): Body {
-    let b = this.bodies.get(id);
-    if (!b) {
-      b = this.makeBody(textureKey, w, h, colour);
-      this.bodies.set(id, b);
-    }
-    return b;
+    const kb = this.bodies.get(id);
+    if (kb && kb.textureKey === textureKey) return kb.body;
+    kb?.body.destroy();
+    const body = this.makeBody(textureKey, w, h, colour);
+    this.bodies.set(id, { body, textureKey });
+    return body;
   }
 
   private makeBody(textureKey: string, w: number, h: number, colour: number): Body {

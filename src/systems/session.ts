@@ -45,6 +45,7 @@ import type {
   SaveState,
   SpecialAbilityId,
   BossId,
+  TextId,
 } from '../core/types';
 import { abilitiesForChapterStart } from './abilities';
 import { hangoverAtChapterStart, hangoverFromChapterEnd, maxHealthFor } from './conditions';
@@ -412,6 +413,12 @@ export function createUiState(session: GameSession) {
     },
     casebook(): readonly CasebookEntry[] {
       return run()?.casebook.entries() ?? session.store.load()?.casebook ?? [];
+    },
+    /** What E would do right now: 'talk' to an NPC or 'examine' something, with its prompt text ID. */
+    interactPrompt(): { readonly kind: 'examine' | 'talk'; readonly textId: TextId } | null {
+      const t = run()?.interactTarget();
+      if (!t) return null;
+      return { kind: t.kind, textId: t.kind === 'talk' ? 'ui.prompt.talk' : 'ui.prompt.examine' };
     },
     currentObjective(): ObjectiveId | null {
       return run()?.objective() ?? null;
