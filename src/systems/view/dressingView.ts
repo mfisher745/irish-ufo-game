@@ -127,7 +127,12 @@ export class DressingView {
       if (!anim && p.frame !== po.frame && this.scene.textures.get(PROPS_KEY).has(p.frame)) obj.setFrame(p.frame);
       po.frame = p.frame;
     }
-    obj.setDepth(p.def.layer === 'floor' ? FLOOR_DEPTH : p.row * TILE + obj.height);
+    // Debris lies on the floor; a hit breakable flashes white.
+    obj.setDepth(p.def.layer === 'floor' || p.broken ? FLOOR_DEPTH : p.row * TILE + obj.height);
+    if (obj instanceof Phaser.GameObjects.Sprite) {
+      if (p.flashMs > 0) obj.setTintFill(PALETTE.white);
+      else obj.clearTint();
+    }
   }
 
   private propAnim(frames: readonly string[], fps: number): string {
