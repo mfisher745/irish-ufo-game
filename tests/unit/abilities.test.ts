@@ -215,9 +215,7 @@ describe('Sliotar Strike', () => {
     expect(def.requires).toBe('hurley');
   });
 
-  // BUG (systems-dev, src/systems/abilities.ts update(), `const sliotar = this.has('sliotarStrike')`):
-  // `AbilityDef.requires` is never enforced. DESIGN 7.2 says the strike hits a ball "with the hurley".
-  it.fails('Sliotar Strike needs the hurley: with it unlocked alone, a full charge does not fire it', () => {
+it('Sliotar Strike needs the hurley: with it unlocked alone, a full charge does not fire it', () => {
     const a = abilities(['bottleThrow', 'sliotarStrike']);
     const c = abilityContext();
     a.update(1, frame({ pressed: ['ranged'] }), c);
