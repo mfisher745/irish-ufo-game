@@ -1115,7 +1115,16 @@ export interface SaveState {
   readonly casebook: readonly CasebookEntry[];
   /** Hints already given, per objective (0, 1 or 2). */
   readonly hintsGiven: Readonly<Record<ObjectiveId, number>>;
+  /**
+   * Chapter script flags (talked to Dympna, lesson shown and so on), so a
+   * script can rebuild its state after death or Continue. Keys are prefixed
+   * with the chapter, e.g. `c1.dympnaTalked`.
+   */
+  readonly flags: Readonly<Record<string, ChapterFlagValue>>;
 }
+
+/** Value of a chapter script flag stored in the save. */
+export type ChapterFlagValue = boolean | number | string;
 
 /**
  * Audio settings, stored under their own key, separate from `SaveState`.
@@ -1162,7 +1171,7 @@ export interface HangoverTuning {
 /** Player movement, noise and carrying. DESIGN.md sections 7.1, 7.2 and 7.3. */
 export interface PlayerTuning {
   readonly maxHealth: number;
-  readonly walkSpeed: number;
+  /** WASD moves at this speed; Shift sneaks. There is no separate walk. */
   readonly runSpeed: number;
   readonly sneakSpeedMultiplier: number;
   readonly footstepNoiseRadius: number;
@@ -1305,6 +1314,12 @@ export interface GameEventPayloads {
   'chapter:completed': { readonly chapter: ChapterNumber; readonly endBuzzState: BuzzState };
   'game:paused': Record<string, never>;
   'game:resumed': Record<string, never>;
+  /** Andrew arrived on a screen; audio switches the regional theme. */
+  'screen:entered': { readonly screenId: ScreenId; readonly region: RegionId };
+  /** The Borrowed Glove fired; gravity-switch puzzles listen for this. */
+  'ability:glovePulse': { readonly screenId: ScreenId; readonly position: Vec2; readonly radius: number };
+  /** Myko finished a call-in and the section is complete. */
+  'myko:callFinished': { readonly sectionId: CompletableSectionId; readonly kind: MykoCallKind };
 }
 
 /** Every event name. Use these constants rather than string literals. DESIGN.md section 10. */
@@ -1355,6 +1370,9 @@ export const GameEvents = {
   ChapterCompleted: 'chapter:completed',
   GamePaused: 'game:paused',
   GameResumed: 'game:resumed',
+  ScreenEntered: 'screen:entered',
+  AbilityGlovePulse: 'ability:glovePulse',
+  MykoCallFinished: 'myko:callFinished',
 } as const satisfies Readonly<Record<string, keyof GameEventPayloads>>;
 
 /** Union of every event name. DESIGN.md section 10. */
