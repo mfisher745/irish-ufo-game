@@ -47,6 +47,7 @@ import type { DialogueView } from '../model/dialogue';
 import { buildHudModel, perimeterSegments } from '../model/hud';
 import type { HudModel } from '../model/hud';
 import { wrapText } from '../model/wrap';
+import { bindPromptHost } from '../prompts';
 import { PROMPT_EVENTS, UiSceneKeys } from '../shared';
 import type { UiShared } from '../shared';
 
@@ -118,6 +119,7 @@ export class HudScene extends Phaser.Scene {
   create(): void {
     const { source } = this.shared;
     bindFullscreenHotkey(this.game);
+    bindPromptHost(this.game);
     this.queue = new DialogueQueue({
       lookup: (id) => sequence(id),
       speakerName: (line) => this.speakerName(line),
@@ -424,7 +426,7 @@ export class HudScene extends Phaser.Scene {
       label.setX(bg.x + (slot.drinkId === null ? 3 : 16));
       if (slot.drinkId === null) {
         icon.setVisible(false);
-        setLabelText(label, slot.selected ? text('ui.hud.noDrink') : '');
+        setLabelText(label, '');
         setLabelColour(label, 'steel');
       } else {
         icon.set(iconFrames.drink(slot.drinkId), 'amber').setDim(!slot.selected);
