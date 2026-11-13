@@ -445,8 +445,9 @@ interface BotLook {
   done: boolean;
 }
 
-async function botFight(page: Page, sectionId: string): Promise<{ seconds: number; hpLeft: number; maxHp: number; died: boolean; swings: number; buzzEnd: number }> {
+async function botFight(page: Page, sectionId: string): Promise<{ seconds: number; hpLeft: number; lowestHp: number; maxHp: number; died: boolean; swings: number; buzzEnd: number }> {
   const t0 = Date.now();
+  let lowestHp = Infinity; // a completion reward (the spice bag) can heal him, so the end figure alone hides damage taken
   let lastClick = 0;
   let swings = 0;
   const held = new Set<string>();
@@ -475,8 +476,9 @@ async function botFight(page: Page, sectionId: string): Promise<{ seconds: numbe
         };
       }, sectionId);
       const seconds = (Date.now() - t0) / 1000;
-      if (look.deaths > 0) return { seconds, hpLeft: 0, maxHp: look.maxHp, died: true, swings, buzzEnd: look.buzz };
-      if (look.done) return { seconds, hpLeft: look.hp, maxHp: look.maxHp, died: false, swings, buzzEnd: look.buzz };
+      lowestHp = Math.min(lowestHp, look.hp);
+      if (look.deaths > 0) return { seconds, hpLeft: 0, lowestHp: 0, maxHp: look.maxHp, died: true, swings, buzzEnd: look.buzz };
+      if (look.done) return { seconds, hpLeft: look.hp, lowestHp, maxHp: look.maxHp, died: false, swings, buzzEnd: look.buzz };
       if (seconds > 150) throw new Error('bot gave up after 150 s');
       if (look.blocking) {
         await set(new Set());
