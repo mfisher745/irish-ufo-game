@@ -1,17 +1,30 @@
 import Phaser from 'phaser';
-import { BootScene } from './scenes/BootScene';
+import { BootScene } from './core/BootScene';
 
-new Phaser.Game({
+const WIDTH = 480;
+const HEIGHT = 270;
+
+// Largest whole-number zoom that fits the window (minimum 1).
+const fitZoom = (): number =>
+  Math.max(1, Math.floor(Math.min(window.innerWidth / WIDTH, window.innerHeight / HEIGHT)));
+
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#0d130f',
+  pixelArt: true,
+  roundPixels: true,
   scale: {
-    mode: Phaser.Scale.FIT,
-    autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: 960,
-    height: 540,
+    mode: Phaser.Scale.NONE,
+    width: WIDTH,
+    height: HEIGHT,
+    zoom: fitZoom(),
   },
   scene: [BootScene],
+});
+
+window.addEventListener('resize', () => {
+  game.scale.setZoom(fitZoom());
 });
 
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
