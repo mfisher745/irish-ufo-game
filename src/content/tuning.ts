@@ -267,7 +267,7 @@ const enemy = (
 });
 
 const enemies: Tuning['enemies'] = {
-  lad: enemy('lad', 'local', 40, 42, [attack('swing', arc(22, 90), 10, 60, 600, 1400, 500)]),
+  lad: enemy('lad', 'local', 60, 46, [attack('swing', arc(22, 90), 10, 60, 600, 1200, 500)]),
   cousin: enemy('cousin', 'local', 55, 46, [
     attack('swing', arc(22, 90), 12, 60, 550, 1300, 500),
     attack('shoulder', charge(56, 14), 14, 110, 500, 3000, 700),
@@ -378,7 +378,7 @@ const bosses: Tuning['bosses'] = {
     'boss',
     [30, 12],
     // Dazed for the bull charge's 2000 ms recovery and takes double damage (docs/chapters/01).
-    { moveSpeed: 48, dazedMs: 2000, dazedDamageMultiplier: 2 },
+    { moveSpeed: 58, dazedMs: 2000, dazedDamageMultiplier: 2 },
     beaten,
     [
       {
@@ -386,7 +386,7 @@ const bosses: Tuning['bosses'] = {
         trigger: { kind: 'start' },
         attackSpeedMultiplier: 1,
         attacks: [
-          attack('haymaker', arc(28, 110), 18, 180, 800, 2200, 900),
+          attack('haymaker', arc(28, 110), 18, 180, 800, 1700, 900),
           // Dazed for 2000 ms and takes double damage if the charge hits the tractor or gate.
           attack('bullCharge', charge(220, 22), 20, 160, 900, 4500, 2000),
         ],
@@ -396,13 +396,13 @@ const bosses: Tuning['bosses'] = {
         trigger: { kind: 'healthBelow', fraction: 0.5 },
         attackSpeedMultiplier: 1.25,
         attacks: [
-          attack('haymaker', arc(28, 110), 18, 180, 800, 2000, 800),
+          attack('haymaker', arc(28, 110), 18, 180, 800, 1500, 800),
           attack('oneTwo', arc(26, 90), 12, 80, 600, 1800, 700, { burst: 2 }),
           attack('bullCharge', charge(220, 22), 20, 160, 900, 4000, 2000),
         ],
       },
     ],
-    220,
+    480,
   ),
   // The ram must stay faster than Andrew's runSpeed (100).
   'c2.setpiece.ram': boss('c2.setpiece.ram', 'setpiece', [90, 12], { moveSpeed: 115 }, { kind: 'reachExit' }, [
@@ -410,7 +410,7 @@ const bosses: Tuning['bosses'] = {
       id: 'chase',
       trigger: { kind: 'start' },
       attackSpeedMultiplier: 1,
-      // The ram runs at 92 against Andrew's 80; a bottle stops it for 1500 ms.
+      // The ram runs at 115 against Andrew's 100; a bottle stops it for 1500 ms.
       attacks: [attack('butt', charge(40, 16), 12, 200, 500, 2500, 1500)],
     },
   ]),
