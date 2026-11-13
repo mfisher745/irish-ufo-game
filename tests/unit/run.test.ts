@@ -173,7 +173,8 @@ describe('stealth through a run', () => {
     run.stealth('c2.stealth.bog')?.alarm();
     expect(alarm).toEqual([{ sectionId: 'c2.stealth.bog', fightId: 'c2.stealth.bog.alarm' }]);
     const alive = run.enemies().filter((e) => !e.down);
-    expect(alive.length).toBe(1 + 3); // the original guard plus tuning's three suits
+    const alarmWave = TUNING.fights['c2.stealth.bog.alarm']?.waves[0]?.enemies.reduce((n, g) => n + g.count, 0) ?? 0;
+    expect(alive.length).toBe(1 + alarmWave); // the original guard plus tuning's first wave
     expect(run.stealth('c2.stealth.bog')?.alarmRaised).toBe(true);
     run.completeCurrent();
     expect(run.isComplete('c2.stealth.bog.alarm')).toBe(true);

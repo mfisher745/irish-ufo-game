@@ -171,7 +171,7 @@ describe('FightRunner', () => {
     const guard = new EnemyActor('suit', statsFromDef(TUNING.enemies.suit), SPAWN[0] as Vec2, () => ({ kind: 'enemy', enemyId: 'suit', attackId: 'x' }), seededRandom(1));
     f.adopt([guard]);
     f.start();
-    expect(f.aliveActors().length).toBe(1 + 3);
+    expect(f.aliveActors().length).toBe(1 + def.waves[0]!.enemies.reduce((n, g) => n + g.count, 0));
   });
 
   it('every fight in tuning spawns exactly its wave counts and can be fought to completion', () => {
@@ -245,7 +245,7 @@ describe('BossRunner phases', () => {
     r.tick(16);
     expect(r.phase?.id).toBe('jacketOff');
     expect(phases.map((p) => p.phaseId)).toEqual(['jacketOn', 'jacketOff']);
-    expect(r.body('bigtom')?.attackSpeedMultiplier).toBe(1.25);
+    expect(r.body('bigtom')?.attackSpeedMultiplier).toBe(TUNING.bosses['c1.boss.bigtom'].phases[1]?.attackSpeedMultiplier);
     r.tick(16);
     expect(phases).toHaveLength(2);
   });
@@ -253,7 +253,9 @@ describe('BossRunner phases', () => {
   it('a phase never goes backwards when health is healed', () => {
     const { r } = boss('c1.boss.bigtom', [body('bigtom')]);
     r.start();
-    damage(r, 'bigtom', 150);
+    const max = TUNING.bosses['c1.boss.bigtom'].maxHealth ?? 0;
+    const trigger = TUNING.bosses['c1.boss.bigtom'].phases[1]?.trigger;
+    damage(r, 'bigtom', max * (1 - (trigger?.kind === 'healthBelow' ? trigger.fraction : 0.5)) + 1);
     r.tick(16);
     const b = r.body('bigtom');
     if (b) b.health = b.stats.maxHealth;
@@ -302,7 +304,7 @@ describe('BossRunner phases', () => {
     const { r } = boss('c1.boss.bigtom', [body('bigtom')]);
     r.start();
     r.suspended = true;
-    damage(r, 'bigtom', 200);
+    damage(r, 'bigtom', (TUNING.bosses['c1.boss.bigtom'].maxHealth ?? 0) * 0.9);
     r.tick(10_000);
     expect(r.phase?.id).toBe('jacketOn');
     expect(r.elapsedMs).toBe(0);
@@ -313,7 +315,8 @@ describe('BossRunner end conditions', () => {
   it('healthBelow 0 (Big Tom): ends when he is down, with reward once', () => {
     const { r, h } = boss('c1.boss.bigtom', [body('bigtom')]);
     r.start();
-    damage(r, 'bigtom', 219);
+    const max = TUNING.bosses['c1.boss.bigtom'].maxHealth ?? 0;
+    damage(r, 'bigtom', max - 1);
     r.tick(16);
     expect(r.isComplete()).toBe(false);
     damage(r, 'bigtom', 1);
@@ -328,8 +331,10 @@ describe('BossRunner end conditions', () => {
   it('healthBelow 0.15 (Pruitt, round one) ends at 15 per cent, not above', () => {
     const { r } = boss('c5.boss.pruitt1', [body('pruitt')]);
     r.start();
-    const max = TUNING.bosses['c5.boss.pruitt1'].maxHealth ?? 0;
-    damage(r, 'pruitt', max * 0.84);
+    const def = TUNING.bosses['c5.boss.pruitt1'];
+    const max = def.maxHealth ?? 0;
+    const end = def.end.kind === 'healthBelow' ? def.end.fraction : 0;
+    damage(r, 'pruitt', max * (1 - end - 0.01));
     r.tick(16);
     expect(r.isComplete()).toBe(false);
     damage(r, 'pruitt', max * 0.02);
@@ -340,12 +345,17 @@ describe('BossRunner end conditions', () => {
   it('healthBelow 0.4 (Pruitt, round two) ends at 40 per cent and passes through phase two first', () => {
     const { r } = boss('c8.boss.pruitt2', [body('pruitt')]);
     r.start();
-    const max = TUNING.bosses['c8.boss.pruitt2'].maxHealth ?? 0;
-    damage(r, 'pruitt', max * 0.45);
+    const def = TUNING.bosses['c8.boss.pruitt2'];
+    const max = def.maxHealth ?? 0;
+    const end = def.end.kind === 'healthBelow' ? def.end.fraction : 0;
+    const truck = def.phases.find((p) => p.id === 'truck')?.trigger;
+    const truckAt = truck?.kind === 'healthBelow' ? truck.fraction : 1;
+    expect(truckAt).toBeGreaterThan(end);
+    damage(r, 'pruitt', max * (1 - (truckAt + end) / 2));
     r.tick(16);
     expect(r.phase?.id).toBe('truck');
     expect(r.isComplete()).toBe(false);
-    damage(r, 'pruitt', max * 0.2);
+    damage(r, 'pruitt', max * (truckAt - end));
     r.tick(16);
     expect(r.isComplete()).toBe(true);
   });

@@ -164,7 +164,9 @@ describe('melee: punch combo and Hurley', () => {
       const a = abilities(['punchCombo']);
       const c = abilityContext(state);
       a.update(1, frame({ pressed: ['melee'] }), c);
-      return a.update(160, frame({ pressed: ['melee'] }), c).length;
+      // Halfway between the Grand and Sober cooldowns: only the faster state can swing again.
+      const cd = TUNING.abilities.punchCombo.cooldownMs;
+      return a.update((cd + cd / TUNING.buzz.effects.grand.attackSpeedMultiplier) / 2, frame({ pressed: ['melee'] }), c).length;
     };
     expect(fire('sober')).toBe(0);
     expect(fire('grand')).toBe(1);
