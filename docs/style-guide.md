@@ -48,13 +48,14 @@ Every enemy attack has a telegraph frame held for at least 400 ms. If the player
 ## 5. Font
 
 - One bitmap font generated in code: 5 × 7 glyphs in a 6 × 9 cell, upper and lower case, digits, and `. , ' " ! ? : ; - ( ) / + × € $ % &`. Include á é í ó ú and their capitals; "Poitín" must render properly.
-- Text is `white` on `ink` with no shadow. Speaker names are coloured: Andrew `anorak`, Myko `beanie`, everyone else `fog`. Narrator cards are `bone`, centred, all caps.
+- Text is `white` on `ink` with no shadow. Speaker names are coloured: Andrew `grass`, Myko `motelPinkShade` on dark backgrounds and `beanie` on the casebook's light page, everyone else `fog`. Narrator cards are `bone`, centred, all caps.
 - A dialogue line fits in 3 lines of 64 characters. Anything longer is two lines of dialogue or a worse joke.
 
 ## 6. Writing
 
 DESIGN.md section 2 is the rule. These are the mechanics of applying it.
 
+- Casebook text IDs: evidence is `<evidenceId>.title`, `.body`, `.margin`; a solved board is `<deductionId>.lead.title`, `.lead.body`, `.lead.margin`, with `<deductionId>.prompt` and `.answer` for the board itself; a Myko call is `c<chapter>.call.<fight|puzzle>.casebook` and `.margin`.
 - All text lives in `src/content/dialogue/`, one file per chapter plus `common.ts` (pickups, HUD, menus, death lines, hints, idle lines) and `callins.ts`.
 - Every line has a stable ID: `c3.halloran.intro.02`. Code refers to IDs and never to strings.
 - Andrew's lines are short. If Andrew has more than two sentences, Myko should have had one of them.

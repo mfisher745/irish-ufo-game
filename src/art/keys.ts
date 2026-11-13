@@ -100,3 +100,9 @@ export const fx = {
   groundMarker: 'marker',
   pickupGlint: ['glint.0', 'glint.1'],
 } as const;
+
+/** Texture key for a named or generic NPC (see `NpcId` in cast.ts). NPCs have `idle` and `walk`. */
+export const npcKey = (id: string): string => `npc.${id}`;
+
+/** Texture key for props and furniture; frames are named in props.ts. */
+export const PROPS_KEY = 'props.main';

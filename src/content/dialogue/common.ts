@@ -138,6 +138,7 @@ export const COMMON: DialogueFile = {
     'ui.casebook.leads': 'Leads',
     'ui.casebook.proof': 'Proof',
     'ui.casebook.empty': 'Nothing yet. Give it time.',
+    'ui.casebook.callTitle': 'A bit of help',
     'ui.deduction.title': 'What does it add up to?',
     'ui.deduction.instruction': 'Link three.',
     'ui.deduction.confirm': 'That’s it',
