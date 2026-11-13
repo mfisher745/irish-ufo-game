@@ -51,8 +51,10 @@ export interface HudModel {
 const clamp01 = (n: number): number => (Number.isFinite(n) ? Math.max(0, Math.min(1, n)) : 0);
 
 export function pipFills(current: number, max: number): PipFill[] {
-  const pipValue = TUNING.player.maxHealth / HEALTH_PIPS;
-  const count = Math.max(1, Math.ceil(max / pipValue));
+  // Pips are worth a fifth of the base health; the last one is stretched so that full health
+  // (reduced under a hangover) always draws every pip full.
+  const count = Math.max(1, Math.ceil(max / (TUNING.player.maxHealth / HEALTH_PIPS)));
+  const pipValue = max / count;
   const out: PipFill[] = [];
   for (let i = 0; i < count; i++) {
     const inPip = current - i * pipValue;
@@ -67,6 +69,7 @@ export function buildHudModel(source: UiStateSource): HudModel {
   const heat = source.heat();
   const slots = source.drinkSlots();
   const selectedIndex = source.selectedDrink();
+  // The session only ever selects a usable special (unlocked, with what it requires), so nothing else is checked here.
   const special = source.selectedSpecial();
   const boss = source.boss();
   const calls = TUNING.myko.callsPerGame;

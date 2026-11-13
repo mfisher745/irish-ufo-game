@@ -4,7 +4,7 @@
 
 import type { ChapterModule } from '../../core/chapter';
 import type { ChapterDef, ObjectiveDef } from '../../core/types';
-import { createChapterScript, BIG_TOM_MOVE_SPEED } from './script';
+import { createChapterScript } from './script';
 import { KEG_AREA, PUB_START, T, kegTile, pubScreen, roadScreen, streetScreen, tilesArea, yardScreen } from './maps';
 
 const objective = (key: string, id: string): ObjectiveDef => ({
@@ -17,16 +17,16 @@ const def: ChapterDef = {
   number: 1,
   titleTextId: 'c1.title',
   screens: [
-    { id: 'c1.pub', region: 'kilnamoe', widthTiles: 30, heightTiles: 17, locationCardTextId: 'c1.card.pub' },
+    { id: 'c1.pub', region: 'kilnamoe', widthTiles: 30, heightTiles: 17 },
     { id: 'c1.yard', region: 'kilnamoe', widthTiles: 20, heightTiles: 17 },
-    { id: 'c1.street', region: 'kilnamoe', widthTiles: 70, heightTiles: 17, locationCardTextId: 'c1.card.street' },
-    { id: 'c1.road', region: 'kilnamoe', widthTiles: 30, heightTiles: 17, locationCardTextId: 'c1.card.road' },
+    { id: 'c1.street', region: 'kilnamoe', widthTiles: 70, heightTiles: 17 },
+    { id: 'c1.road', region: 'kilnamoe', widthTiles: 30, heightTiles: 17 },
   ],
   startScreenId: 'c1.pub',
   checkpoints: [
     // Shares the object with the pub's player start so Myko starts at his table.
     { id: 'c1.cp.start', kind: 'chapterStart', screenId: 'c1.pub', position: PUB_START },
-    // Not in the spec: a place to come back to if Andrew falls at the chipper.
+    // Where Andrew comes back to if he falls at the chipper.
     { id: 'c1.cp.street', kind: 'other', screenId: 'c1.street', position: T(3, 8) },
     { id: 'c1.cp.boss', kind: 'boss', screenId: 'c1.street', position: T(44, 9) },
   ],
@@ -85,7 +85,7 @@ export const chapter1: ChapterModule = {
       sectionId: 'c1.fight.chipper',
       screenId: 'c1.street',
       trigger: { kind: 'script' },
-      spawnPoints: [T(32, 6), T(35, 7), T(36, 9)],
+      spawnPoints: [T(33, 6), T(35, 8), T(36, 10)],
       entrance: T(26, 8),
     },
   ],
@@ -94,7 +94,7 @@ export const chapter1: ChapterModule = {
       bossId: 'c1.boss.bigtom',
       screenId: 'c1.street',
       trigger: { kind: 'script' },
-      bodies: [{ tag: 'bigtom', position: T(60, 9), moveSpeed: BIG_TOM_MOVE_SPEED }],
+      bodies: [{ tag: 'bigtom', position: T(60, 9) }],
       entrance: T(40, 11),
     },
   ],
