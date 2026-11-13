@@ -19,6 +19,7 @@ import type { UiStateSource } from './contract';
 export { UiSceneKeys };
 export type { UiHooks, UiStateSource };
 export { toggleFullscreen } from './fullscreen';
+export { showPrompt, hidePrompt } from './prompts';
 
 export function createUiScenes(source: UiStateSource, hooks: UiHooks = {}): Phaser.Scene[] {
   const shared = createShared(source, hooks);
