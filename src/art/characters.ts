@@ -1,6 +1,6 @@
 /**
  * Andrew, Myko and the named cast. docs/style-guide.md section 2 and
- * DESIGN.md section 3: Andrew is short and slight (16 x 24); Myko is a full
+ * DESIGN.md section 3: Andrew is short and slight (16 x 28); Myko is half a
  * head taller and thin (16 x 32).
  */
 
@@ -13,13 +13,13 @@ const once = (poses: AnimSpec['poses'], frameRate = 8): AnimSpec => ({ poses, fr
 
 export const ANDREW: Look = {
   cellWidth: 16,
-  cellHeight: 24,
+  cellHeight: 28,
   headWidth: 8,
   headHeight: 7,
   torsoWidth: 6,
-  torsoHeight: 7,
+  torsoHeight: 8,
   armWidth: 1,
-  legLength: 6,
+  legLength: 9,
   legWidth: 2,
   skin: 'skin',
   skinShade: 'skinShade',
