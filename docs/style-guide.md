@@ -6,7 +6,7 @@ Owner: `creative-director`. This document says how the game looks, reads and sou
 
 - Internal resolution is 480 × 270. One view is 30 × 16.875 tiles of 16 × 16, so design screens as 30 × 17 with the bottom row partly under the HUD.
 - Scale by whole numbers only, with no smoothing and no sub-pixel camera positions. Round the camera to whole pixels.
-- Every colour comes from `src/art/palette.ts`. No gradients, no alpha blending except for three cases: vision cones (40% alpha), the hangover brightness overlay and screen fades.
+- Every colour comes from `src/art/palette.ts`. A region's own colours dominate its screens; other palette colours may appear in small amounts. No gradients, no alpha blending except for three cases: vision cones (40% alpha), the hangover brightness overlay and screen fades.
 - Light comes from the top left. Shade is one palette step darker on the bottom and right. Nothing has more than three tones: light, base, shade.
 - Characters and interactable objects have a 1-pixel `ink` outline. Scenery tiles do not. This is how the player tells what can be used from what cannot.
 - No dithering on characters. Dithering is allowed on ground tiles (bog, sand, corn) in a 2 × 2 checker only.

@@ -31,7 +31,7 @@ export const C03: DialogueFile = {
     'c3.clue.certificate.margin': 'Four years running. Fair play to him.',
     'c3.clue.visitors.title': 'Visitors’ book',
     'c3.clue.visitors.body': 'Opened 2011. No entries.',
-    'c3.clue.visitors.margin': 'Sign it. Go on. Make his year.',
+    'c3.clue.visitors.margin': 'Sign it. Make his year.',
     'c3.clue.manifest.title': 'Shipping manifest',
     'c3.clue.manifest.body': 'Forty containers a year, Kilnamoe to Pier Nine Freight, Boston. Contents: “agricultural”. Container numbers all start MAS.',
     'c3.clue.manifest.margin': 'Forty containers of nothing. That’s a lot of nothing to post.',
