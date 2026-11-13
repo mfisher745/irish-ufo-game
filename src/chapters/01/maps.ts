@@ -4,7 +4,7 @@
  * sight grid derived from `tileFlags`, so the art and the walls cannot drift.
  */
 
-import { tileFlags, tileIndex } from '../../art';
+import { tileFlags, tileIndex } from '../../art/tiles';
 import type { ExitDef, ScreenLayout } from '../../core/chapter';
 import type { ScreenId, TileGrid, Vec2 } from '../../core/types';
 import { tileCentre } from '../../systems';
@@ -193,8 +193,8 @@ export function streetScreen(): ScreenLayout {
 export function roadScreen(): ScreenLayout {
   const c = new Canvas(30, 17, 'b');
   c.rect(0, 0, 30, 1, '#').rect(0, 16, 30, 1, '#').rect(0, 0, 1, 17, '#').rect(29, 0, 1, 17, '#');
-  // Grass and hedge behind the north wall, the road, a low wall on the south side, then bog.
-  c.rect(1, 1, 28, 1, 'H').rect(1, 2, 28, 4, 'g');
+  // Hedge and dark ground behind the north wall, the road, a low wall on the south side, then bog.
+  c.rect(1, 1, 28, 1, 'H').rect(1, 2, 28, 4, 'b');
   c.rect(1, 6, 28, 1, 'K').rect(14, 6, 2, 1, 'G');
   c.rect(1, 7, 28, 3, 'p');
   c.rect(1, 10, 28, 1, 'K');

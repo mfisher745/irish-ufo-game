@@ -9,8 +9,8 @@
  * for NPCs.
  */
 
-import { PROP } from '../../art';
-import type { NpcId } from '../../art';
+import { PROP } from '../../art/props';
+import type { NpcId } from '../../art/cast';
 
 export interface PropPlacement {
   readonly screen: string;

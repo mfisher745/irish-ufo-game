@@ -154,6 +154,7 @@ export function createChapterScript(ctx: ChapterContext): ChapterScript {
   // --- Yard and street ----------------------------------------------------
 
   const enteredYard = (): void => {
+    hidePrompt();
     if (!flag('mykoFree')) {
       setFlag('mykoFree');
       ctx.setMykoScripted(null);
@@ -230,12 +231,25 @@ export function createChapterScript(ctx: ChapterContext): ChapterScript {
     },
   };
 
+  /** Time left on the double-damage daze. */
+  let dazeLeftMs = 0;
   const bigTomHooks: BossHooks = {
+    // Workaround: the actor's own daze reset is skipped when the charge's recovery begins right after the stun
+    // (src/systems/enemies.ts finishBurstShot), so the multiplier is put back here when the daze time is up.
+    onTick: (boss, dtMs) => {
+      if (dazeLeftMs <= 0) return;
+      dazeLeftMs -= dtMs;
+      if (dazeLeftMs <= 0) {
+        const body = boss.body('bigtom');
+        if (body) body.damageTakenMultiplier = 1;
+      }
+    },
     onChargeBlocked: (boss, body, col, row) => {
       if (!inTiles(TRACTOR, col, row) && !inTiles(CHURCH_GATE, col, row)) return;
       const charge = boss.phase?.attacks.find((a) => a.id === 'bullCharge');
       // Dazed for the charge's recovery time (2 seconds in tuning), taking double damage.
-      boss.daze(body.tag, charge?.recoveryMs ?? 0, DAZED_DAMAGE_MULTIPLIER);
+      dazeLeftMs = charge?.recoveryMs ?? 0;
+      boss.daze(body.tag, dazeLeftMs, DAZED_DAMAGE_MULTIPLIER);
       void ctx.say('c1.bigTom.dazed');
     },
     onPhaseChanged: (_boss, phase) => {
