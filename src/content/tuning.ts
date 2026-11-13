@@ -402,7 +402,7 @@ const bosses: Tuning['bosses'] = {
         ],
       },
     ],
-    // Wants to be 480; held at 220 until two unit tests stop hardcoding his health.
+    // Playtested at 220 and found right for chapter 1. Do not raise without another playtest.
     220,
   ),
   // The ram must stay faster than Andrew's runSpeed (100).
