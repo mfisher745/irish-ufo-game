@@ -13,7 +13,7 @@ Region: `kilnamoe`. Night, raining lightly. Teaches movement, interacting, drink
 
 ## Beats
 
-1. **Title card**, then `c1.pub`. Andrew is at the bar. Myko is at the corner table and stays there until Andrew leaves.
+1. **Title card**, then `c1.pub`. Andrew is at the bar. Myko stands by the corner table and stays there until Andrew leaves.
 2. **Dympna's list** (`c1.explore.pub`). Dympna gives the tutorial as a list of what Andrew owes her. Each item is an input prompt:
    - Walk to the end of the bar (WASD). He owes her for the stool.
    - Talk to her (E). He owes her for last Thursday.
@@ -22,7 +22,7 @@ Region: `kilnamoe`. Night, raining lightly. Teaches movement, interacting, drink
 3. **The fruit machine.** It took Andrew's euro. Left click three times teaches the punch combo; the haymaker makes it pay out one coin, which Dympna takes off the slate. Myko comments from his table.
 4. **Closing time.** Dympna has locked the front door for a lock-in that Andrew is not part of. The way out is the back.
 5. **Keg puzzle** (`c1.puzzle.kegs`, puzzle). Two full kegs block the yard gate. Kegs are pushed by walking into them and slide one tile at a time. Six-by-five play area, two kegs, one fixed crate; solvable in four pushes. This teaches pushing for the crate puzzle in chapter 3. Myko follows from here.
-6. **Main Street** (`c1.explore.street`). Pickups: a naggin of whiskey behind the bookies' bins, crisps on the chipper windowsill. Empties are counted on the HUD from the first drink; they have no use yet and Myko says collecting them is a habit, not a plan.
+6. **Main Street** (`c1.explore.street`). Checkpoint on arrival, so dying at the chipper does not send the player back to the pub. Pickups: a naggin of whiskey behind the bookies' bins, crisps on the chipper windowsill. Empties are counted on the HUD from the first drink; they have no use yet and Myko says collecting them is a habit, not a plan.
 7. **The row outside the chipper** (`c1.fight.chipper`, fight). The last spice bag has gone to the person ahead of Andrew. Words are had. Three `lad`s: one first, then two together. The spice bag is the reward and heals fully.
 8. **Checkpoint.** A prompt introduces the Myko call (hold M) here, as information only. Myko says he is there in an advisory capacity.
 9. **Big Tom Brennan** (`c1.boss.bigtom`, boss) by the tractor.

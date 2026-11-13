@@ -211,6 +211,18 @@ function kilnamoe(): TileDef[] {
     t('pavement', checker('steel', 'slate', 8)),
     t('yardConcrete', flat('steel', 'slate', 11, 5)),
     t('litGround', flat('peat', 'amber', 9, 6)),
+    // Shopfronts and doors for Main Street.
+    t('shopfrontLit', on(bricks('turfDark', 'ink', 'turf'), (b) => void b.rect(1, 2, 14, 11, 'ink').rect(2, 3, 12, 9, 'amberLight').rect(2, 9, 12, 3, 'amber').hline(1, 13, 14, 'peat')), true, true),
+    t('shopfrontDark', on(bricks('turfDark', 'ink', 'turf'), (b) => void b.rect(1, 2, 14, 11, 'ink').rect(2, 3, 12, 9, 'navyDark').set(4, 5, 'slate').set(5, 5, 'slate')), true, true),
+    t('doorWood', on(bricks('turfDark', 'ink', 'turf'), (b) => void b.rect(3, 1, 10, 15, 'ink').rect(4, 2, 8, 14, 'peat').vline(8, 2, 14, 'turf').set(10, 9, 'amberLight')), true, true),
+    t('doorLit', on(bricks('turfDark', 'ink', 'turf'), (b) => void b.rect(3, 1, 10, 15, 'ink').rect(4, 2, 8, 14, 'amber').rect(5, 3, 6, 5, 'amberLight')), true, true),
+    t('churchStone', bricks('steel', 'slate', 'fog'), true, true),
+    t('roofSlate', on(flat('coal'), (b) => {
+      for (let y = 3; y < 16; y += 4) b.hline(0, y, 16, 'ink');
+      for (let y = 0; y < 16; y += 4) for (let x = (y / 4) % 2 === 0 ? 2 : 6; x < 16; x += 8) b.vline(x, y, 3, 'slate');
+    }), true, true),
+    t('kerb', on(flat('slate', 'coal', 13, 3), (b) => void b.rect(0, 0, 16, 4, 'steel').hline(0, 4, 16, 'coal'))),
+    t('nightGrass', flat('mossDark', 'ink', 6, 23)),
   ];
 }
 

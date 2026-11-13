@@ -209,7 +209,7 @@ export const C01: DialogueFile = {
     box('c1.hint.leave.1', ['myko', 'The front is locked and there’s a door behind the bar end. I won’t draw you a map.']),
     box('c1.hint.leave.2', ['myko', 'Back door, bottom corner, where the light is on the floor. Walk through it.']),
     box('c1.hint.kegs.1', ['myko', "There's two kegs and a gate. Think about which keg is in the other keg's way."]),
-    box('c1.hint.kegs.2', ['myko', 'Push the near one left, out of the road. Then the far one up against the wall. Then the gate.']),
+    box('c1.hint.kegs.2', ['myko', 'Near one up, then left, out of the road. Far one left, then up against the wall. Then the gate.']),
     box('c1.hint.chipper.1', ['myko', "Follow the smell. It's the only thing open and it's lit up like a ferry."]),
     box('c1.hint.chipper.2', ['myko', 'Right, down the street, past the bookies. Join the queue. Try to concentrate on the queue.']),
     box('c1.hint.row.1', ['myko', "They swing slow. You'll see it coming a week ahead. Don't be there when it lands."]),
