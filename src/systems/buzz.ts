@@ -27,6 +27,8 @@ export class Buzz {
   private phase: BanjaxedPhase = 'none';
   private phaseMsLeft = 0;
   private lastState: BuzzState;
+  /** Drain is held off this long after a drink (DESIGN.md 7.1). */
+  private drainHoldMs = 0;
 
   constructor(
     private readonly bus: GameEventBus,
@@ -64,6 +66,8 @@ export class Buzz {
 
   /** Adds (or with a negative amount removes) Buzz. Drinking while fallen still counts. */
   add(amount: number): void {
+    // Only drinks add Buzz, so a positive add starts the no-drain spell (one pint is worth having).
+    if (amount > 0) this.drainHoldMs = this.t.drainDelayAfterDrinkMs;
     this.setValue(this.v + amount, true);
   }
 
@@ -79,6 +83,7 @@ export class Buzz {
     this.v = Math.min(this.t.max, Math.max(0, value));
     this.phase = 'none';
     this.phaseMsLeft = 0;
+    this.drainHoldMs = 0;
     this.lastState = this.state;
   }
 
@@ -94,6 +99,10 @@ export class Buzz {
         this.setPhase('none', 0);
         this.setValue(this.t.banjaxedResetTo, false);
       }
+      return;
+    }
+    if (this.drainHoldMs > 0) {
+      this.drainHoldMs = Math.max(0, this.drainHoldMs - dtMs);
       return;
     }
     if (this.v > 0) {
