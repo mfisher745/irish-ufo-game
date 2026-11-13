@@ -573,6 +573,8 @@ export interface BossPhaseDef {
   readonly trigger: BossPhaseTrigger;
   readonly attacks: readonly AttackDef[];
   readonly attackSpeedMultiplier: number;
+  /** Walking pace in this phase; absent keeps `BossDef.moveSpeed`. */
+  readonly moveSpeed?: number;
 }
 
 /** A boss or set piece. Defined in `src/content/tuning.ts` under its section ID. docs/chapters, "Boss" sections. */
@@ -587,6 +589,15 @@ export interface BossDef {
   readonly end: BossEndCondition;
   /** Arena size in tiles. */
   readonly arenaTiles: { readonly width: number; readonly height: number };
+  /**
+   * Walking pace of the bodies (pixels per second). A phase's `moveSpeed`
+   * overrides it, and a body placement's `moveSpeed` overrides both. 0 stands still.
+   */
+  readonly moveSpeed: number;
+  /** How long `BossRunner.daze()` stuns a body, for bosses that can be dazed (Big Tom into the tractor). */
+  readonly dazedMs?: number;
+  /** Damage-taken multiplier while dazed. */
+  readonly dazedDamageMultiplier?: number;
 }
 
 /** One wave of a fight. docs/chapters, "Beats". */
@@ -1035,7 +1046,11 @@ export interface ScreenDef {
   readonly region: RegionId;
   readonly widthTiles: number;
   readonly heightTiles: number;
-  /** Location card caption, if this screen shows one. */
+  /**
+   * @deprecated Ignored: no system shows location cards. Chapters play their
+   * `cN.caption.*` caption sequences with `ctx.say` instead. To be removed once
+   * chapter 1 stops setting it.
+   */
   readonly locationCardTextId?: TextId;
 }
 
@@ -1179,6 +1194,67 @@ export interface PlayerTuning {
   /** Max count of one drink type in one slot. */
   readonly drinkSlotCap: number;
   readonly maxEmpties: number;
+  /** Collision box at Andrew's feet (sprite is 16 x 24). Enemies use bodyWidth square. */
+  readonly bodyWidth: number;
+  readonly bodyHeight: number;
+  /** Invulnerability after taking a hit, so one swing cannot hit twice. */
+  readonly hurtInvulnerableMs: number;
+  /** Time The Stumble's dash takes to cover `dashDistance`. */
+  readonly stumbleDashMs: number;
+  /** Aim sway cycle at full `aimSwayDeg`. */
+  readonly swayPeriodMs: number;
+  /** Movement drift cycle (Locked and above). */
+  readonly driftPeriodMs: number;
+  /** Delay between falling and the save being restored. */
+  readonly deathRespawnDelayMs: number;
+  /** The Sober remark only plays after at least this long at Grand or above. */
+  readonly soberRemarkMinMsAbove: number;
+}
+
+/** Enemy AI and hit resolution. DESIGN.md section 7.2. */
+export interface CombatTuning {
+  /** Knockback is an initial speed; this is how fast it bleeds off, per second. */
+  readonly knockbackDecayPerSecond: number;
+  /** Speed of a `charge` attack once it is released. */
+  readonly chargeSpeed: number;
+  /** Gap between shots of a burst. */
+  readonly burstIntervalMs: number;
+  /** Radius used for hit tests against a character. */
+  readonly characterHitRadius: number;
+  /** Radius of a lobbed projectile's hit where it lands. */
+  readonly lobSplashRadius: number;
+  /** Peak height of a lobbed projectile's arc, for drawing. */
+  readonly lobPeakHeight: number;
+  /** Radius of a straight projectile. */
+  readonly projectileRadius: number;
+  /** An enemy starts its approach when Andrew is this close (fights wake everyone). */
+  readonly aggroRange: number;
+  /** A disguised enemy reveals itself when Andrew is this close. */
+  readonly disguiseRevealRange: number;
+  /** How long a `lad` backs off after landing a hit. */
+  readonly backOffMs: number;
+  /** Enemies keep this much space between each other. */
+  readonly separationRadius: number;
+  /** Sideways offset an agent aims for when flanking. */
+  readonly flankOffset: number;
+  /** Ranged enemies try to hold this fraction of their projectile range. */
+  readonly rangedPreferredFraction: number;
+  /** Pause between a fight's waves. */
+  readonly betweenWavesMs: number;
+  /** Re-plan a path to Andrew at this interval. */
+  readonly repathMs: number;
+  /** Stun applied by a bottle to an enemy it hits (none = 0). */
+  readonly bottleStunMs: number;
+}
+
+/** World interaction tuning. */
+export interface WorldTuning {
+  /** Andrew reaches a checkpoint within this distance of it. */
+  readonly checkpointRadius: number;
+  /** Hold time walking into a pushable before it moves. */
+  readonly pushHoldMs: number;
+  /** Time a pushed keg or crate takes to slide one tile. */
+  readonly pushSlideMs: number;
 }
 
 /** Stealth tuning. DESIGN.md section 7.3. */
@@ -1191,6 +1267,19 @@ export interface StealthTuning {
   readonly actNaturalStillMs: number;
   /** Vision range multiplier for seated guards. */
   readonly seatedVisionMultiplier: number;
+  /** Guard turn speed, degrees per second. */
+  readonly turnDegPerSecond: number;
+  /** How long a guard looks around at the spot it investigates. */
+  readonly lookAroundMs: number;
+  /**
+   * Sneaking at Locked or above is audible at short range (DESIGN.md 7.3).
+   * Noise radius = footstepNoiseRadius x (footstepNoiseMultiplier - 1) x this.
+   */
+  readonly lockedSneakNoiseFactor: number;
+  /** Footstep noise is emitted at this interval while moving. */
+  readonly footstepIntervalMs: number;
+  /** Guard walking speed as a fraction of its moveSpeed. */
+  readonly patrolSpeedFraction: number;
 }
 
 /** Heat tuning. docs/chapters/08-the-long-road.md "Heat". */
@@ -1217,6 +1306,17 @@ export interface MykoTuning {
   /** Share of tangents about Ohio from chapter 7 on ("about two in three"). */
   readonly ohioTangentShare: number;
   readonly followDistance: number;
+  readonly walkSpeed: number;
+  /** Called-in stroll speed. */
+  readonly strollSpeed: number;
+  /** Minimum gap between unprompted comments. */
+  readonly commentCooldownMs: number;
+  /** Chance Myko comments on a drink. */
+  readonly drinkCommentChance: number;
+  /** Heat fraction at which he warns. */
+  readonly heatWarnFraction: number;
+  /** Chance of a tangent each time the idle timer fires instead of an idle line. */
+  readonly tangentChance: number;
 }
 
 /** Investigation tuning. DESIGN.md section 7.4. */
@@ -1236,9 +1336,13 @@ export interface ChapterSelectTuning {
  * docs/chapters/README.md.
  */
 export interface Tuning {
+  /** Audio settings before the player touches the sliders. */
+  readonly audioDefaults: AudioSettings;
   readonly buzz: BuzzTuning;
   readonly hangover: HangoverTuning;
   readonly player: PlayerTuning;
+  readonly combat: CombatTuning;
+  readonly world: WorldTuning;
   readonly stealth: StealthTuning;
   readonly heat: HeatTuning;
   readonly myko: MykoTuning;

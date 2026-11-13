@@ -45,6 +45,7 @@ import type {
   SaveState,
   SpecialAbilityId,
   BossId,
+  TextId,
 } from '../core/types';
 import { abilitiesForChapterStart } from './abilities';
 import { hangoverAtChapterStart, hangoverFromChapterEnd, maxHealthFor } from './conditions';
@@ -125,7 +126,10 @@ export function chapterSelectSave(module: ChapterModule, existing: SaveState | n
   const abilities = abilitiesForChapterStart(n);
   const casebook: CasebookEntry[] = [...base.casebook];
   for (const id of priorEvidence) {
-    if (!casebook.some((e) => e.kind === 'evidence' && e.evidenceId === id)) casebook.push({ kind: 'evidence', evidenceId: id, chapter: n });
+    // Filed under the chapter the clue came from (its ID prefix), not the one being started.
+    const from = chapterOf(id);
+    const chapter = (from >= 1 && from < n ? from : n) as ChapterNumber;
+    if (!casebook.some((e) => e.kind === 'evidence' && e.evidenceId === id)) casebook.push({ kind: 'evidence', evidenceId: id, chapter });
   }
   const specials = abilities.filter((a): a is SpecialAbilityId => a === 'stoutSlam' || a === 'poitinBreath' || a === 'borrowedGlove');
   return saveAtChapterStart(module, {
@@ -134,7 +138,8 @@ export function chapterSelectSave(module: ChapterModule, existing: SaveState | n
       health: TUNING.player.maxHealth,
       buzz: 0,
       empties: 0,
-      drinkSlots: TUNING.chapterSelect.startingDrinks,
+      // Chapter 1's tutorial hands Andrew his first pint; a full stout slot would refuse it.
+      drinkSlots: n === 1 ? freshPlayerSnapshot().drinkSlots : TUNING.chapterSelect.startingDrinks,
       selectedDrink: 0,
       selectedSpecial: specials[0] ?? null,
       unlockedAbilities: abilities,
@@ -408,6 +413,12 @@ export function createUiState(session: GameSession) {
     },
     casebook(): readonly CasebookEntry[] {
       return run()?.casebook.entries() ?? session.store.load()?.casebook ?? [];
+    },
+    /** What E would do right now: 'talk' to an NPC or 'examine' something, with its prompt text ID. */
+    interactPrompt(): { readonly kind: 'examine' | 'talk'; readonly textId: TextId } | null {
+      const t = run()?.interactTarget();
+      if (!t) return null;
+      return { kind: t.kind, textId: t.kind === 'talk' ? 'ui.prompt.talk' : 'ui.prompt.examine' };
     },
     currentObjective(): ObjectiveId | null {
       return run()?.objective() ?? null;

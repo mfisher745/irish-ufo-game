@@ -7,9 +7,14 @@
  * Layout (tiles): pickups top left, a suit patrolling the top right with a
  * noticeboard to hide by, the keg puzzle bottom left, the lads' fight bottom
  * right, an examinable clue and a checkpoint in the middle.
+ *
+ * Dressing and ambience demo (west half): a solid tractor to walk behind and
+ * in front of, the animated bog lights, a keg prop that a punch swaps to a
+ * crate and whose haymaker toggles the night, Dympna to talk to, and a night
+ * tint with one light at the tractor.
  */
 
-import type { ChapterModule } from './chapter';
+import type { ChapterModule, ScreenAmbient } from './chapter';
 import type { AbilityId, ChapterNumber, CheckpointId, ScreenId, StealthSectionDef, Vec2 } from './types';
 import { gridFromAscii, tileCentre } from '../systems/grid';
 
@@ -34,6 +39,12 @@ const ROWS = [
   '#.........#..................#',
   '##############################',
 ];
+
+const NIGHT: ScreenAmbient = {
+  tint: 'navyDark',
+  strength: 0.7,
+  lights: [{ x: 4 * 16 + 24, y: 6 * 16 + 4, radius: 56, colour: 'amberLight' }],
+};
 
 const ALL_ABILITIES: readonly AbilityId[] = [
   'punchCombo',
@@ -108,7 +119,23 @@ export function createSandboxModule(chapter: ChapterNumber = 1): ChapterModule {
       },
       finaleSectionId: 'c1.boss.bigtom',
     },
-    screens: [{ id: screenId, grid: gridFromAscii(ROWS), exits: [], playerStart: T(3, 7) }],
+    screens: [
+      {
+        id: screenId,
+        grid: gridFromAscii(ROWS),
+        exits: [],
+        playerStart: T(3, 7),
+        dressing: {
+          props: [
+            { id: 'sandbox.tractor', frame: 'tractor', col: 4, row: 4, solid: { dy: 1, width: 3, height: 1 }, blocksSight: true },
+            { frame: 'bogLights.0', col: 7, row: 9, frames: ['bogLights.0', 'bogLights.1', 'bogLights.2'], frameRate: 3 },
+            { id: 'sandbox.keg', frame: 'keg', col: 10, row: 5, solid: { width: 1, height: 1 } },
+          ],
+          npcs: [{ id: 'sandbox.dympna', npc: 'dympna', col: 2, row: 9, facing: 'right', examinableId: 'sandbox.dympna', solid: true }],
+        },
+        ambient: NIGHT,
+      },
+    ],
     pickups: [
       { id: 'sandbox.stout', item: { kind: 'drink', drinkId: 'stout', count: 2 }, screenId, position: T(3, 2) },
       { id: 'sandbox.whiskey', item: { kind: 'drink', drinkId: 'whiskey', count: 1 }, screenId, position: T(5, 2) },
@@ -161,11 +188,31 @@ export function createSandboxModule(chapter: ChapterNumber = 1): ChapterModule {
       },
     ],
     triggers: [],
-    createScript: (ctx) => ({
-      onStart: () => {
-        for (const id of ALL_ABILITIES) ctx.unlockAbility(id);
-        ctx.setObjective('sandbox.objective');
-      },
-    }),
+    createScript: (ctx) => {
+      let night = true;
+      let off: (() => void) | null = null;
+      return {
+        onStart: () => {
+          for (const id of ALL_ABILITIES) ctx.unlockAbility(id);
+          ctx.setObjective('sandbox.objective');
+          off = ctx.onMeleeHit(
+            { x: 10 * 16, y: 5 * 16, width: 16, height: 16 },
+            (hit) => {
+              ctx.setPropFrame('sandbox.keg', hit.comboIndex % 2 === 0 ? 'crate' : 'keg');
+              if (!hit.haymaker) return;
+              night = !night;
+              ctx.setAmbient(night ? NIGHT : null);
+            },
+            screenId,
+          );
+        },
+        onExamine: (id) => {
+          if (id !== 'sandbox.dympna') return undefined;
+          void ctx.say('c1.pub.photo');
+          return true;
+        },
+        dispose: () => off?.(),
+      };
+    },
   };
 }
