@@ -179,10 +179,7 @@ describe('Chapter Select start state (README)', () => {
     expect(s.casebook.map((e) => (e.kind === 'evidence' ? e.evidenceId : ''))).toEqual(['c2.clue.ring', 'c3.clue.map']);
   });
 
-  // BUG (systems-dev, src/systems/session.ts chapterSelectSave): every prior clue is filed with
-  // `chapter: n` (the chapter being started) instead of the chapter the clue came from, so the casebook
-  // groups chapter 2 and 3 clues under chapter 4.
-  it.fails('files each earlier clue under its own chapter', () => {
+it('files each earlier clue under its own chapter', () => {
     const s = chapterSelectSave(createSandboxModule(4), null, ['c2.clue.ring', 'c3.clue.map']);
     expect(s.casebook.map((e) => (e.kind === 'evidence' ? e.chapter : 0))).toEqual([2, 3]);
   });

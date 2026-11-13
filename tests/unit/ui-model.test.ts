@@ -369,9 +369,7 @@ describe('HUD model', () => {
     expect(pipFills(75, 75)).toHaveLength(4);
   });
 
-  // BUG (level-builder, src/ui/model/hud.ts pipFills): a hungover Andrew at his full 75 of 75 health is drawn with a
-  // half pip (4th pip is 15/20), so he never looks fully healthy while the hangover lasts.
-  it.fails('a hungover Andrew at full health shows only full pips', () => {
+it('a hungover Andrew at full health shows only full pips', () => {
     expect(pipFills(75, 75).every((p) => p === 'full')).toBe(true);
   });
 
