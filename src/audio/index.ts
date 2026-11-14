@@ -180,6 +180,7 @@ export function createAudio(bus: GameEventBus, getSettings: () => AudioSettings,
     }),
     bus.on(G.EnemyDefeated, () => play('enemyDown')),
     bus.on(G.AbilityUsed, ({ abilityId }) => {
+      if (abilityId === 'punchCombo') play('swing');
       const e = ABILITY_SOUND[abilityId];
       if (e !== undefined && e !== 'hurley') play(e);
     }),

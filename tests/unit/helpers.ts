@@ -25,6 +25,7 @@ import { Abilities } from '../../src/systems/abilities';
 import type { AbilityContext } from '../../src/systems/abilities';
 import { gridFromAscii } from '../../src/systems/grid';
 import { ChapterRun } from '../../src/systems/run';
+import type { RunEffect } from '../../src/systems/run';
 import { emptyProgress, saveAtChapterStart } from '../../src/systems/session';
 
 export { NO_INPUT };
@@ -113,7 +114,7 @@ export interface RunHarness {
 
 /** A headless chapter run on the dev sandbox, capturing every save the run writes. */
 export function makeRun(
-  opts: { chapter?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10; save?: (base: SaveState) => SaveState; seed?: number; module?: ChapterModule } = {},
+  opts: { chapter?: 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10; save?: (base: SaveState) => SaveState; seed?: number; module?: ChapterModule; playEffect?: (id: RunEffect) => void } = {},
 ): RunHarness {
   const module = opts.module ?? createSandboxModule(opts.chapter ?? 1);
   const base = saveAtChapterStart(module, emptyProgress());
@@ -137,6 +138,7 @@ export function makeRun(
     },
     resumed: false,
     afterDeath: false,
+    ...(opts.playEffect ? { playEffect: opts.playEffect } : {}),
     writeSave: (state, reason) => {
       saves.push({ state, reason });
     },

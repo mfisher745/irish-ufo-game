@@ -29,7 +29,7 @@ export const ANDREW: Look = {
   legs: 'denim',
   shoes: 'bone',
   eyes: 'tired',
-  stubble: true,
+  beard: true,
 };
 
 export const MYKO: Look = {

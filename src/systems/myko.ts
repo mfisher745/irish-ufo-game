@@ -10,7 +10,7 @@
  *   are left).
  * - Otherwise the call is spent and the game saves at once (the casebook
  *   entry is written then). Gameplay pauses and `myko:blackout` is emitted
- *   with the caption `c<N>.call.<kind>.blackout`; the UI covers the screen
+ *   with the caption `myko.call.<kind>.blackout.<n>` (n = 1..3, which call of the save); the UI covers the screen
  *   and calls `blackoutFinished(sequenceId)` (via `uiState.dialogueFinished`)
  *   when its cards are done, or after `blackoutTimeoutMs` the game carries on
  *   by itself. Then `completeNow('myko')` (enemies down, puzzle solved), Myko
@@ -85,6 +85,8 @@ export interface MykoHost {
   stealthUncaught(): boolean;
   callsLeft(): number;
   callLines(kind: MykoCallKind): MykoCallLineSet | null;
+  /** Calls already spent in this chapter in this save (read before `spendCall`). */
+  callsThisChapter(): number;
   /** Spend one call: decrement, record, casebook entry, save at once. */
   spendCall(sectionId: CompletableSectionId, kind: MykoCallKind): void;
   /** Save again after the section is complete. */
@@ -104,6 +106,8 @@ interface CallInProgress {
   readonly sectionId: CompletableSectionId;
   readonly kind: MykoCallKind;
   readonly sequenceId: DialogueId;
+  /** Calls already spent this chapter before this one: 1 plays `myko.call.again`, 2 plays `myko.call.allThree`. */
+  readonly earlier: number;
   elapsed: number;
 }
 
@@ -212,6 +216,9 @@ export class Myko {
     if (!target) return false;
     const sectionId = target.completable.sectionId;
     const kind = MYKO_CALL_KIND_BY_SECTION[target.completable.kind];
+    const earlier = this.host.callsThisChapter();
+    // Which call of the save this is (whole game); `callsLeft` is saved, so it survives reload.
+    const nth = Math.min(3, Math.max(1, TUNING.myko.callsPerGame - this.host.callsLeft() + 1));
     this.host.spendCall(sectionId, kind);
     this.host.bus.emit(GameEvents.MykoCallStarted, { sectionId, kind, callsLeft: this.host.callsLeft() });
     target.setSuspended?.(true);
@@ -219,8 +226,8 @@ export class Myko {
     this.host.setPlayerProtected(true);
     this.mode = 'calledIn';
     this.smoking = false;
-    const sequenceId: DialogueId = `c${this.host.chapter()}.call.${kind}.blackout`;
-    this.call = { target, sectionId, kind, sequenceId, elapsed: 0 };
+    const sequenceId = `myko.call.${kind}.blackout.${nth}` as DialogueId;
+    this.call = { target, sectionId, kind, sequenceId, earlier, elapsed: 0 };
     this.host.bus.emit(GameEvents.MykoBlackout, { sectionId, kind, sequenceId });
     return true;
   }
@@ -280,17 +287,22 @@ export class Myko {
     if (!c) return;
     this.call = null;
     c.target.setSuspended?.(false);
-    this.finishCall(c.target, c.sectionId, c.kind);
+    this.finishCall(c.target, c.sectionId, c.kind, c.earlier);
     this.host.setPlayerProtected(false);
     this.placeNear(this.host.playerPos());
     this.mode = 'following';
     this.stillMs = 0;
   }
 
-  private finishCall(target: CallTarget, sectionId: CompletableSectionId, kind: MykoCallKind): void {
+  private finishCall(target: CallTarget, sectionId: CompletableSectionId, kind: MykoCallKind, earlier: number): void {
     // The post-call scene first, straight after the blackout; the section's own end lines queue behind it.
-    const lines = this.host.callLines(kind);
-    if (lines) this.host.play(lines.sequenceId);
+    // Second call in the chapter: `myko.call.again`; third: `myko.call.allThree`. Each can occur once per save,
+    // so they play without `repeat` and the "nothing is said twice" record guards them.
+    if (earlier >= 1) this.host.play(earlier >= 2 ? 'myko.call.allThree' : 'myko.call.again');
+    else {
+      const lines = this.host.callLines(kind);
+      if (lines) this.host.play(lines.sequenceId);
+    }
     target.completable.completeNow('myko');
     this.host.bus.emit(GameEvents.MykoCallFinished, { sectionId, kind });
     this.host.saveAfterCall();

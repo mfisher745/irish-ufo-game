@@ -73,7 +73,9 @@ export const C01: DialogueFile = {
       'c1.pub.listEnd',
       ['dympna', 'That’s the list. I’ll read it again tomorrow.'],
       ['andrew', 'I’ll be in.'],
-      ['dympna', 'I know you will.'],
+      ['dympna', 'I know you will. The knee is at me again, Doctor.'],
+      ['andrew', "I can't look at it, Dympna."],
+      ['dympna', 'I know you can’t. I’m only telling you.'],
     ),
 
     // Optional examines

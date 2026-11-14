@@ -35,6 +35,18 @@ const pint =
     }
   };
 
+/** A five-fingered cannabis leaf, symmetrical about the cell's centre line, with a short stem. */
+const leaf =
+  (blade: ColourName, stem: ColourName): Draw =>
+  (b) => {
+    b.rect(5, 0, 2, 8, blade);
+    b.line(4, 7, 1, 2, blade).line(4, 6, 2, 3, blade);
+    b.line(7, 7, 10, 2, blade).line(7, 6, 9, 3, blade);
+    b.line(4, 8, 0, 6, blade).line(7, 8, 11, 6, blade);
+    b.line(4, 9, 2, 10, blade).line(7, 9, 9, 10, blade);
+    b.rect(5, 8, 2, 4, stem);
+  };
+
 /** A bottle: body colour, label colour, and how tall. */
 const bottle = (body: ColourName, label: ColourName, tall = true): Draw =>
   outlined((b) => {
@@ -118,13 +130,9 @@ export function iconSheet(): Sheet {
   sheet.cell(icon.pintHalf, pint(2));
   sheet.cell(icon.pintEmpty, pint(0));
   sheet.cell(icon.empty, bottle('moss', 'mossDark'));
-  // Rollies sit on the dark HUD strip too: light shapes, no ink outline.
-  sheet.cell(icon.rollie, (b) => {
-    b.rect(1, 6, 8, 3, 'white').hline(1, 8, 8, 'bone').rect(9, 6, 2, 3, 'amber').set(10, 4, 'fog').set(9, 2, 'fog').set(10, 1, 'steel');
-  });
-  sheet.cell(icon.rollieSpent, (b) => {
-    b.rect(4, 7, 4, 2, 'steel').rect(8, 7, 1, 2, 'slate');
-  });
+  // Myko calls: a cannabis leaf each (the frame keys keep their old `rollie` names). No ink outline on the dark strip.
+  sheet.cell(icon.rollie, leaf('grass', 'moss'));
+  sheet.cell(icon.rollieSpent, leaf('slate', 'slate'));
   sheet.cell(
     icon.detection,
     outlined((b) => {

@@ -1467,7 +1467,7 @@ export interface GameEventPayloads {
   'myko:callFinished': { readonly sectionId: CompletableSectionId; readonly kind: MykoCallKind };
   /**
    * A call was accepted: gameplay is paused. The UI covers the screen in black,
-   * shows the caption `sequenceId` (`c<N>.call.<kind>.blackout`) and calls
+   * shows the caption `sequenceId` (`myko.call.<kind>.blackout.<n>`, n = 1..3: which Myko call of the save) and calls
    * `uiState.dialogueFinished(sequenceId)` when it is done.
    */
   'myko:blackout': { readonly sectionId: CompletableSectionId; readonly kind: MykoCallKind; readonly sequenceId: DialogueId };

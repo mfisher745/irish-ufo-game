@@ -22,7 +22,7 @@ Rules for every line of text:
 - No cartoon Irishness. No leprechauns, no "top o' the morning", no "begorrah", no lucky charms, no stage accent spelled out phonetically.
 - Americans may say those things *to* Andrew. His tired reaction is the joke.
 - Irish slang and references are used the way people use them, without explanation. The context has to carry the meaning for players who don't know the word.
-- No real people, real brands, real song lyrics or real company names.
+- No real people, real brands, real song lyrics or real company names. The one exception is that a famous fictional character may be named in passing as a comparison, never shown and never quoted (the narrator compares Myko to Batman).
 - Text only. There is no voice acting.
 
 Slang and references the writing can draw on:
@@ -61,8 +61,9 @@ Voice samples. These set the register; they are not required lines.
 
 ### Andrew (player character)
 
-- 38, from Kilnamoe, County Leitrim (a fictional town). On the dole. Three-time winner of the Feeney's table quiz, which he mentions.
-- Short and slight. He is about half a head shorter than Myko and he is not pudgy. He wears a worn green-grey anorak, jeans and runners, and has stubble and tired eyes.
+- 38, from Kilnamoe, County Leitrim (a fictional town). On the dole since he lost his licence. Three-time winner of the Feeney's table quiz, which he mentions.
+- He was a doctor, the GP in Kilnamoe, until he was struck off the register. The reason is never stated: not by him, not by Myko, not by the narrator, and not in a joke that gives it away. Nobody asks. People at home still call him Doctor out of habit and still tell him their symptoms, and he says he can't look at it. When he is hit he knows exactly what has been broken.
+- Short and slight. He is about half a head shorter than Myko and he is not pudgy. He wears a worn green-grey anorak, jeans and runners, and has a full dark beard and tired eyes.
 - He has a chip on his shoulder. He wants to prove himself to the world, and it does not matter how. Aliens are what turned up. If it had been a record-breaking turnip he would have gone after that with the same face.
 - He believes in aliens with complete, calm certainty. He is polite, stubborn and hopeless with money, and he is braver than he should be once he has had a few.
 - He never says any of this out loud. It shows in what he mentions (the table quiz), in who he brings up without being asked (people from school who "did well"), and in how much he hates asking Myko for help.
@@ -225,8 +226,8 @@ Death returns the player to the last checkpoint with a line from Myko. Checkpoin
 
 - Holding M asks Myko to finish the current fight or puzzle. Andrew has **three calls for the whole game**. They do not refill, and the number left is stored in the save.
 - It works on any combat encounter, any boss or finale set piece, any physical puzzle and any deduction board. It does not work on stealth sections that have not turned into a fight, and it does not work on the Administrator. Andrew does that one himself.
-- Myko always succeeds, at once and without effort, and the player never sees how. The screen cuts to black. Two or three narrator cards say, flatly, how little time it took and how little trouble it was. The game comes back with every enemy on the ground, or the puzzle solved, and Myko standing where he was, still smoking. How he can do any of this is never explained, and nobody asks.
-- Afterwards he gives Andrew a good-natured hard time about it. The slagging is warm, and it is the fondest he sounds before the ending. Each chapter has its own lines for a fight call and a puzzle call. A second or third call inside one chapter gets a different scene, the same one in every chapter and for both kinds of call (`myko.call.again`), in which Myko gives Andrew a much harder time for needing him more than once in the same place. It is the one scripted scene that may play twice in a save.
+- Myko always succeeds, at once and without effort, and the player never sees how. The screen cuts to black. Three narrator cards say, flatly, how little time it took and how little trouble it was. Each of the three calls has its own cards, chosen by whether it is the first, second or third call of the save and whether it is a fight or a puzzle, so the player never sees the same cutscene twice. The second fight cutscene compares Myko to Batman, and Batman comes off worse. The game comes back with every enemy on the ground, or the puzzle solved, and Myko standing where he was, still smoking. How he can do any of this is never explained, and nobody asks.
+- Afterwards he gives Andrew a good-natured hard time about it. The slagging is warm, and it is the fondest he sounds before the ending. Each chapter has its own lines for a fight call and a puzzle call. A second call inside one chapter gets a different scene, the same one in every chapter and for both kinds of call (`myko.call.again`), in which Myko gives Andrew a much harder time for needing him twice in the same place. If all three calls are spent inside one chapter, the third gets its own scene (`myko.call.allThree`), also shared by every chapter. It is the hardest Myko is on Andrew anywhere in the game: hard, never cruel, and he is still coming with him at the end of it.
 - A call costs Andrew nothing except his pride. The encounter counts as complete and gives its normal rewards. It is recorded in the casebook in Andrew's words, briefly and inaccurately ("Myko helped a bit"), with Myko's correction in the margin.
 - The call is spent the moment it is used and the game saves immediately, so reloading does not give it back.
 - If the player finishes the game with all three calls unused, Myko remarks on it in the epilogue. He is nearly impressed.
@@ -255,7 +256,7 @@ Progress saves automatically to the browser's local storage at each checkpoint, 
 
 - The aliens are small, grey and neatly dressed. They look like people who work in an office, because they do.
 - Andrew's sprite is short and slight, not round. Myko's is tall and thin, bare-headed, with brown hair.
-- HUD: every slot shows its icon and the key or mouse button that uses it. Health top left. Along the bottom: the three drink slots (1, 2, 3, with Q on the selected one), empties with the right mouse button, the melee attack with the left mouse button, the dodge with Space once learned, the special with F, the Buzz meter and its state name in the centre, and Myko calls left (three small rollie icons, M). Things Andrew can pick up or examine are drawn as themselves with a small glint, never as abstract markers. Dialogue box with a 32 × 32 portrait.
+- HUD: every slot shows its icon and the key or mouse button that uses it. Health top left. Along the bottom: the three drink slots (1, 2, 3, with Q on the selected one), empties with the right mouse button, the melee attack with the left mouse button, the dodge with Space once learned, the special with F, the Buzz meter and its state name in the centre, and Myko calls left (three small cannabis-leaf icons, M). Things Andrew can pick up or examine are drawn as themselves with a small glint, never as abstract markers. Dialogue box with a 32 × 32 portrait.
 - A pixel bitmap font, generated in code.
 
 ## 9. Audio

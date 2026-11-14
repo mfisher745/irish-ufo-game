@@ -8,6 +8,7 @@ import { seededRandom } from '../../src/core/random';
 import type { Completable, CompletableKind, CompletableSectionId, DialogueId, MykoCallKind, ObjectiveDef } from '../../src/core/types';
 import { Myko, evaluateCall } from '../../src/systems/myko';
 import type { CallTarget, MykoHost } from '../../src/systems/myko';
+import { hasSequence, sequence } from '../../src/content/dialogue';
 import { advance, frame, holdM, makeRun, record, teleport } from './helpers';
 import type { RunHarness } from './helpers';
 
@@ -70,10 +71,10 @@ describe('evaluateCall (pure rules)', () => {
 
 // ---------------------------------------------------------------------------
 
-function fakeHost(opts: { calls?: number; target?: () => CallTarget | null; stealth?: boolean } = {}) {
+function fakeHost(opts: { calls?: number; target?: () => CallTarget | null; stealth?: boolean; priorCalls?: number } = {}) {
   const log: string[] = [];
   const bus = new EventBus();
-  const state = { calls: opts.calls ?? 3, saved: 0, played: [] as DialogueId[], protectedOn: false, repeat: new Map<DialogueId, boolean>() };
+  const state = { calls: opts.calls ?? 3, spent: opts.priorCalls ?? 0, saved: 0, played: [] as DialogueId[], protectedOn: false, repeat: new Map<DialogueId, boolean>() };
   const host: MykoHost = {
     bus,
     rng: seededRandom(2),
@@ -87,9 +88,11 @@ function fakeHost(opts: { calls?: number; target?: () => CallTarget | null; stea
     callTarget: () => (opts.target ? opts.target() : null),
     stealthUncaught: () => opts.stealth === true,
     callsLeft: () => state.calls,
+    callsThisChapter: () => state.spent,
     callLines: (kind: MykoCallKind) => ({ sequenceId: `c1.call.${kind}`, casebookBodyTextId: 'b', casebookMarginTextId: 'm' }),
     spendCall: (id, kind) => {
       state.calls -= 1;
+      state.spent += 1;
       state.saved += 1;
       log.push(`spend:${id}:${kind}`);
     },
@@ -134,7 +137,7 @@ describe('Myko call-in (fake host)', () => {
     expect(c.done).toBe(false);
     expect(f.state.played).toEqual([]);
     expect(started).toEqual([{ sectionId: 'c1.puzzle.kegs', kind: 'puzzle', callsLeft: 2 }]);
-    expect(blackout).toEqual([{ sectionId: 'c1.puzzle.kegs', kind: 'puzzle', sequenceId: 'c1.call.puzzle.blackout' }]);
+    expect(blackout).toEqual([{ sectionId: 'c1.puzzle.kegs', kind: 'puzzle', sequenceId: 'myko.call.puzzle.blackout.1' }]);
     expect(finished).toEqual([]);
     // A second call during the blackout is ignored and spends nothing.
     expect(f.myko.tryCall()).toBe(false);
@@ -148,9 +151,9 @@ describe('Myko call-in (fake host)', () => {
     const finished = record(f.bus, 'myko:callFinished');
     f.myko.pos = { x: 5, y: 5 };
     f.myko.tryCall();
-    expect(f.myko.blackoutFinished('c1.call.fight.blackout')).toBe(false); // not the current blackout
+    expect(f.myko.blackoutFinished('myko.call.fight.blackout.1')).toBe(false); // not the current blackout
     expect(f.myko.callInProgress).toBe(true);
-    expect(f.myko.blackoutFinished('c1.call.puzzle.blackout')).toBe(true);
+    expect(f.myko.blackoutFinished('myko.call.puzzle.blackout.1')).toBe(true);
     expect(f.log).toEqual(['spend:c1.puzzle.kegs:puzzle', 'play:c1.call.puzzle', 'complete', 'saveAfter']);
     expect(log).toEqual(['complete:myko']);
     expect(c.done).toBe(true);
@@ -160,7 +163,7 @@ describe('Myko call-in (fake host)', () => {
     expect(f.myko.mode).toBe('following');
     expect(Math.hypot(f.myko.pos.x - 100, f.myko.pos.y - 100)).toBeCloseTo(TUNING.myko.followDistance, 5);
     // A late duplicate from the UI does nothing.
-    expect(f.myko.blackoutFinished('c1.call.puzzle.blackout')).toBe(false);
+    expect(f.myko.blackoutFinished('myko.call.puzzle.blackout.1')).toBe(false);
     expect(f.log.filter((l) => l === 'saveAfter')).toHaveLength(1);
   });
 
@@ -181,7 +184,7 @@ describe('Myko call-in (fake host)', () => {
     const f = fakeHost({ target: () => ({ completable: c, entrance: null, setSuspended: (on) => void calls.push(on) }) });
     f.myko.tryCall();
     expect(calls).toEqual([true]);
-    f.myko.blackoutFinished('c1.call.fight.blackout');
+    f.myko.blackoutFinished('myko.call.fight.blackout.1');
     expect(calls).toEqual([true, false]);
   });
 
@@ -189,11 +192,11 @@ describe('Myko call-in (fake host)', () => {
     const d = fakeHost({ target: () => ({ completable: fakeCompletable('c3.deduction.boston', 'deduction'), entrance: null }) });
     d.myko.tryCall();
     expect(d.log).toContain('spend:c3.deduction.boston:puzzle');
-    d.myko.blackoutFinished('c1.call.puzzle.blackout');
+    d.myko.blackoutFinished('myko.call.puzzle.blackout.1');
     expect(d.state.played).toEqual(['c1.call.puzzle']);
     const b = fakeHost({ target: () => ({ completable: fakeCompletable('c1.boss.bigtom', 'boss'), entrance: null }) });
     b.myko.tryCall();
-    b.myko.blackoutFinished('c1.call.fight.blackout');
+    b.myko.blackoutFinished('myko.call.fight.blackout.1');
     expect(b.state.played).toEqual(['c1.call.fight']);
   });
 
@@ -204,7 +207,7 @@ describe('Myko call-in (fake host)', () => {
     const results: boolean[] = [];
     for (let i = 0; i < 4; i++) {
       results.push(f.myko.tryCall());
-      f.myko.blackoutFinished('c1.call.puzzle.blackout');
+      f.myko.blackoutFinished(`myko.call.puzzle.blackout.${i + 1}`);
     }
     expect(results).toEqual([true, true, true, false]);
     expect(f.state.calls).toBe(0);
@@ -289,7 +292,7 @@ describe('Myko call-in (fake host)', () => {
     expect(admin.state.repeat.get('myko.callRefused.administrator.callsLeft')).toBe(true);
     const call = fakeHost({ target: () => ({ completable: fakeCompletable('c1.puzzle.kegs', 'puzzle'), entrance: null }) });
     call.myko.tryCall();
-    call.myko.blackoutFinished('c1.call.puzzle.blackout');
+    call.myko.blackoutFinished('myko.call.puzzle.blackout.1');
     expect(call.state.repeat.get('c1.call.puzzle')).toBe(false);
   });
 
@@ -357,7 +360,7 @@ describe('Myko call-in in a chapter run (sandbox)', () => {
     holdM(run, TUNING.myko.callHoldMs);
     expect(run.callsRemaining()).toBe(2);
     expect(started).toEqual([{ sectionId: 'c1.fight.chipper', kind: 'fight', callsLeft: 2 }]);
-    expect(blackout).toEqual([{ sectionId: 'c1.fight.chipper', kind: 'fight', sequenceId: 'c1.call.fight.blackout' }]);
+    expect(blackout).toEqual([{ sectionId: 'c1.fight.chipper', kind: 'fight', sequenceId: 'myko.call.fight.blackout.1' }]);
     const immediate = saves.slice(before);
     expect(immediate[0]?.reason).toBe('mykoCall');
     expect(immediate[0]?.state.mykoCallsLeft).toBe(2);
@@ -422,7 +425,7 @@ describe('Myko call-in in a chapter run (sandbox)', () => {
     holdM(run, 1000);
     expect(run.callsRemaining()).toBe(2);
     expect(run.isComplete('c1.puzzle.kegs')).toBe(false);
-    expect(blackout.map((b) => b.sequenceId)).toEqual(['c1.call.puzzle.blackout']);
+    expect(blackout.map((b) => b.sequenceId)).toEqual(['myko.call.puzzle.blackout.1']);
     finishBlackout(h, blackout);
     expect(run.isComplete('c1.puzzle.kegs')).toBe(true);
     expect(done.find((d) => d.sectionId === 'c1.puzzle.kegs')?.by).toBe('myko');
@@ -517,5 +520,447 @@ describe('Myko call-in in a chapter run (sandbox)', () => {
     run.walkChapter();
     expect(completions).toHaveLength(1);
     expect(completions[0]?.snapshot.mykoCallsLeft).toBe(2);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DESIGN.md 7.5: a second or third call in one chapter plays the shared myko.call.again.
+// ---------------------------------------------------------------------------
+
+describe('second or third call in a chapter (fake host)', () => {
+  const targetFor = (kind: CompletableKind, n: number, log: string[] = []) => () => ({ completable: fakeCompletable(`c1.${kind}.s${n}`, kind, log), entrance: null });
+
+  function callSeq(kinds: CompletableKind[]) {
+    let n = 0;
+    const f = fakeHost({ target: () => targetFor(kinds[n] as CompletableKind, n)() });
+    const scenes: DialogueId[] = [];
+    for (const k of kinds) {
+      expect(k).toBe(kinds[n]);
+      expect(f.myko.tryCall()).toBe(true);
+      const before = f.state.played.length;
+      f.myko.blackoutFinished(`myko.call.${k === 'fight' ? 'fight' : 'puzzle'}.blackout.${n + 1}`);
+      scenes.push(...f.state.played.slice(before));
+      n++;
+    }
+    return { f, scenes };
+  }
+
+  it('the first call plays the chapter own scene, not the shared one', () => {
+    const { scenes, f } = callSeq(['fight']);
+    expect(scenes).toEqual(['c1.call.fight']);
+    expect(f.state.repeat.get('c1.call.fight')).toBe(false);
+  });
+
+  it.each([
+    [['fight', 'puzzle']],
+    [['puzzle', 'fight']],
+    [['fight', 'fight']],
+    [['puzzle', 'puzzle']],
+  ] as const)('second call after %j plays myko.call.again, not repeatable', (kinds) => {
+    const { scenes, f } = callSeq([...kinds]);
+    expect(scenes).toEqual([`c1.call.${kinds[0]}`, 'myko.call.again']);
+    expect(f.state.repeat.get('myko.call.again')).toBe(false);
+  });
+
+  it.each([
+    [['fight', 'puzzle', 'fight']],
+    [['puzzle', 'fight', 'puzzle']],
+  ] as const)('third call after %j plays myko.call.allThree, not repeatable', (kinds) => {
+    const { scenes, f } = callSeq([...kinds]);
+    expect(scenes).toEqual([`c1.call.${kinds[0]}`, 'myko.call.again', 'myko.call.allThree']);
+    expect(f.state.repeat.get('myko.call.allThree')).toBe(false);
+    expect(f.state.calls).toBe(0);
+  });
+
+  it('a refused call (no calls left) does not count toward "again"', () => {
+    const f = fakeHost({ calls: 0, target: targetFor('fight', 0) });
+    expect(f.myko.tryCall()).toBe(false);
+    expect(f.state.spent).toBe(0);
+    // Refusal on the Administrator and on a non-callable stealth also spend nothing.
+    const a = fakeHost({ target: () => ({ completable: fakeCompletable('c10.boss.administrator', 'boss'), entrance: null }) });
+    expect(a.myko.tryCall()).toBe(false);
+    expect(a.state.spent).toBe(0);
+    const none = fakeHost({ stealth: true, target: () => null });
+    expect(none.myko.tryCall()).toBe(false);
+    expect(none.state.spent).toBe(0);
+  });
+
+  it('a refusal between two calls leaves the next successful call as the first: own scene', () => {
+    const f = fakeHost({ calls: 0, target: targetFor('puzzle', 0) });
+    f.myko.tryCall();
+    f.state.calls = 3;
+    expect(f.myko.tryCall()).toBe(true);
+    f.myko.blackoutFinished('myko.call.puzzle.blackout.1');
+    expect(f.state.played.filter((id) => id === 'myko.call.again')).toEqual([]);
+    expect(f.state.played).toContain('c1.call.puzzle');
+  });
+
+  it('the blackout event with myko.call.<kind>.blackout.<n> is emitted on second and third calls', () => {
+    let n = 0;
+    const kinds: CompletableKind[] = ['puzzle', 'fight', 'puzzle'];
+    const f = fakeHost({ target: () => targetFor(kinds[n] as CompletableKind, n)() });
+    const blackout = record(f.bus, 'myko:blackout');
+    for (const k of kinds) {
+      f.myko.tryCall();
+      f.myko.blackoutFinished(`myko.call.${k}.blackout.${n + 1}`);
+      n++;
+    }
+    expect(blackout.map((b) => b.sequenceId)).toEqual(['myko.call.puzzle.blackout.1', 'myko.call.fight.blackout.2', 'myko.call.puzzle.blackout.3']);
+  });
+
+  it('on a repeat call the order holds: post-call scene, complete myko, callFinished, save', () => {
+    const log: string[] = [];
+    const c = fakeCompletable('c1.fight.again', 'fight', log);
+    const f = fakeHost({ priorCalls: 1, target: () => ({ completable: { ...c, completeNow: (src) => (f.log.push('complete'), c.completeNow(src)) }, entrance: null }) });
+    f.bus.on('myko:callFinished', () => f.log.push('finished'));
+    f.myko.tryCall();
+    f.myko.blackoutFinished('myko.call.fight.blackout.1');
+    expect(f.log).toEqual(['spend:c1.fight.again:fight', 'play:myko.call.again', 'complete', 'finished', 'saveAfter']);
+    expect(log).toEqual(['complete:myko']);
+  });
+
+  it('callsThisChapter is read before the call is spent', () => {
+    const f = fakeHost({ target: targetFor('fight', 0) });
+    const seen: number[] = [];
+    const orig = f.host.callsThisChapter;
+    f.host.callsThisChapter = () => {
+      const v = orig?.() ?? -1;
+      seen.push(v);
+      return v;
+    };
+    new Myko(f.host).tryCall();
+    expect(seen).toEqual([0]);
+  });
+});
+
+describe('second or third call in a chapter (sandbox run, real DialogueManager)', () => {
+  const FIGHT = [22, 13] as const;
+
+  function showLog(h: RunHarness): string[] {
+    const shown: string[] = [];
+    h.bus.on('dialogue:show', (p) => void shown.push(p.sequenceId));
+    return shown;
+  }
+
+  /** One full call on a section: hold M, finish the blackout, drain dialogue. */
+  function call(h: RunHarness, blackout: { sequenceId: string }[], section: 'fight' | 'puzzle'): void {
+    if (section === 'fight') teleport(h.run, ...FIGHT);
+    else h.run.startSection('c1.puzzle.kegs');
+    h.run.tick(16, NO_INPUT);
+    holdM(h.run, TUNING.myko.callHoldMs);
+    finishBlackout(h, blackout);
+    h.run.dialogue.finishAll();
+  }
+
+  it.each(['myko.call.again', 'myko.call.allThree'])('%s exists in the dialogue content and is a scene', (id) => {
+    expect(hasSequence(id)).toBe(true);
+    expect(sequence(id).delivery).toBe('scene');
+  });
+
+  it.each([['fight', 'puzzle'], ['puzzle', 'fight']] as const)('%s then %s: own scene first, then the shared one', (a, b) => {
+    const h = makeRun();
+    const shown = showLog(h);
+    const blackout = record(h.bus, 'myko:blackout');
+    call(h, blackout, a);
+    expect(shown).toContain(`c1.call.${a}`);
+    expect(shown).not.toContain('myko.call.again');
+    call(h, blackout, b);
+    expect(shown.filter((id) => id === 'myko.call.again')).toHaveLength(1);
+    expect(shown).not.toContain(`c1.call.${b}`);
+    expect(blackout.map((x) => x.sequenceId)).toEqual([`myko.call.${a}.blackout.1`, `myko.call.${b}.blackout.2`]);
+  });
+
+  it('three calls: again and allThree each show exactly once, never twice the same', () => {
+    const h = makeRun();
+    const shown = showLog(h);
+    const blackout = record(h.bus, 'myko:blackout');
+    call(h, blackout, 'fight');
+    call(h, blackout, 'puzzle');
+    h.run.tick(16, NO_INPUT);
+    h.run.startSection('c2.stealth.bog');
+    h.run.stealth('c2.stealth.bog')?.alarm();
+    holdM(h.run, TUNING.myko.callHoldMs);
+    expect(h.run.callsRemaining()).toBe(0);
+    finishBlackout(h, blackout);
+    h.run.dialogue.finishAll();
+    expect(shown.filter((id) => id === 'myko.call.again')).toHaveLength(1);
+    expect(shown.filter((id) => id === 'myko.call.allThree')).toHaveLength(1);
+    expect(shown.filter((id) => id === 'c1.call.fight')).toHaveLength(1);
+    expect(shown.indexOf('myko.call.again')).toBeLessThan(shown.indexOf('myko.call.allThree'));
+    expect(blackout.map((x) => x.sequenceId)).toEqual(['myko.call.fight.blackout.1', 'myko.call.puzzle.blackout.2', 'myko.call.fight.blackout.3']);
+  });
+
+  it('order on a repeat call: post-call scene, then the completion by myko, then callFinished, then the save', () => {
+    const h = makeRun();
+    const blackout = record(h.bus, 'myko:blackout');
+    call(h, blackout, 'fight');
+    const order: string[] = [];
+    h.bus.on('dialogue:show', (p) => void order.push(`show:${p.sequenceId}`));
+    h.bus.on('section:completed', (p) => void order.push(`complete:${p.by}`));
+    h.bus.on('myko:callFinished', () => void order.push('finished'));
+    const savesBefore = h.saves.length;
+    h.run.startSection('c1.puzzle.kegs');
+    h.run.tick(16, NO_INPUT);
+    holdM(h.run, TUNING.myko.callHoldMs);
+    const afterSpend = h.saves.length;
+    finishBlackout(h, blackout);
+    h.run.dialogue.finishAll();
+    expect(order.indexOf('show:myko.call.again')).toBeGreaterThanOrEqual(0);
+    expect(order.indexOf('show:myko.call.again')).toBeLessThan(order.indexOf('complete:myko'));
+    expect(order.indexOf('complete:myko')).toBeLessThan(order.indexOf('finished'));
+    expect(h.saves.length).toBeGreaterThan(afterSpend);
+    expect(afterSpend).toBeGreaterThan(savesBefore);
+    expect(h.saves.at(-1)?.reason).toBe('mykoCall');
+    expect(h.saves.at(-1)?.state.completedSectionIds).toContain('c1.puzzle.kegs');
+  });
+
+  it('the casebook entry on a repeat call is still the chapter line set, one per call', () => {
+    const h = makeRun();
+    const blackout = record(h.bus, 'myko:blackout');
+    call(h, blackout, 'fight');
+    call(h, blackout, 'puzzle');
+    expect(h.run.casebook.entries().filter((e) => e.kind === 'mykoCall')).toEqual([
+      { kind: 'mykoCall', sectionId: 'c1.fight.chipper', callKind: 'fight', chapter: 1 },
+      { kind: 'mykoCall', sectionId: 'c1.puzzle.kegs', callKind: 'puzzle', chapter: 1 },
+    ]);
+  });
+
+  it('save and reload after one call: the next call in the same chapter plays the again scene', () => {
+    const h = makeRun();
+    const blackout = record(h.bus, 'myko:blackout');
+    call(h, blackout, 'fight');
+    const saved = h.saves.at(-1)?.state;
+    if (!saved) throw new Error('no save');
+    const h2 = makeRun({ save: () => saved });
+    const shown = showLog(h2);
+    const blackout2 = record(h2.bus, 'myko:blackout');
+    call(h2, blackout2, 'puzzle');
+    expect(shown).toContain('myko.call.again');
+    expect(shown).not.toContain('c1.call.puzzle');
+  });
+
+  it('first call in a different chapter of the same save plays that chapter own scene', () => {
+    const h = makeRun({
+      chapter: 2,
+      save: (base) => ({ ...base, mykoCallsLeft: 2, mykoCalls: [{ chapter: 1, sectionId: 'c1.fight.chipper', kind: 'fight' }] }),
+    });
+    const shown = showLog(h);
+    const blackout = record(h.bus, 'myko:blackout');
+    call(h, blackout, 'puzzle');
+    expect(blackout.map((x) => x.sequenceId)).toEqual(['myko.call.puzzle.blackout.2']);
+    expect(shown).toContain('c2.call.puzzle');
+    expect(shown).not.toContain('myko.call.again');
+    // And a second call in chapter 2 then repeats.
+    call(h, blackout, 'fight');
+    expect(blackout.map((x) => x.sequenceId).at(-1)).toBe('myko.call.fight.blackout.3');
+    expect(shown).toContain('myko.call.again');
+  });
+
+  it('a refused call (none left) in a run does not make the next call an "again"', () => {
+    const h = makeRun({ save: (s) => ({ ...s, mykoCallsLeft: 0 }) });
+    const refused = record(h.bus, 'myko:callRefused');
+    teleport(h.run, ...FIGHT);
+    holdM(h.run, 1200);
+    expect(refused).toEqual([{ reason: 'noCallsLeft' }]);
+    expect(h.run.snapshot().mykoCalls).toEqual([]);
+  });
+  it('save and reload around the calls never replays either shared scene', () => {
+    const h = makeRun();
+    const blackout = record(h.bus, 'myko:blackout');
+    const shown = showLog(h);
+    call(h, blackout, 'fight');
+    call(h, blackout, 'puzzle');
+    expect(shown.filter((id) => id === 'myko.call.again')).toHaveLength(1);
+    // Reload after the second call: the third plays allThree, not again.
+    const saved = h.saves.at(-1)?.state;
+    if (!saved) throw new Error('no save');
+    const h2 = makeRun({ save: () => saved });
+    const shown2 = showLog(h2);
+    const blackout2 = record(h2.bus, 'myko:blackout');
+    h2.run.startSection('c2.stealth.bog');
+    h2.run.tick(16, NO_INPUT);
+    h2.run.stealth('c2.stealth.bog')?.alarm();
+    holdM(h2.run, TUNING.myko.callHoldMs);
+    finishBlackout(h2, blackout2);
+    h2.run.dialogue.finishAll();
+    expect(shown2.filter((id) => id === 'myko.call.again')).toEqual([]);
+    expect(shown2.filter((id) => id === 'myko.call.allThree')).toHaveLength(1);
+  });
+
+  it('two calls in chapter 1 then one in chapter 2 plays chapter 2 own scene, not allThree', () => {
+    const h = makeRun({
+      chapter: 2,
+      save: (base) => ({
+        ...base,
+        mykoCallsLeft: 1,
+        mykoCalls: [
+          { chapter: 1, sectionId: 'c1.fight.chipper', kind: 'fight' },
+          { chapter: 1, sectionId: 'c1.puzzle.kegs', kind: 'puzzle' },
+        ],
+      }),
+    });
+    const shown = showLog(h);
+    const blackout = record(h.bus, 'myko:blackout');
+    call(h, blackout, 'puzzle');
+    expect(shown).toContain('c2.call.puzzle');
+    expect(shown).not.toContain('myko.call.allThree');
+    expect(shown).not.toContain('myko.call.again');
+  });
+
+  it('one call in chapter 1 then two in chapter 2 plays c2 own then again, never allThree', () => {
+    const h = makeRun({
+      chapter: 2,
+      save: (base) => ({ ...base, mykoCallsLeft: 2, mykoCalls: [{ chapter: 1, sectionId: 'c1.fight.chipper', kind: 'fight' }] }),
+    });
+    const shown = showLog(h);
+    const blackout = record(h.bus, 'myko:blackout');
+    call(h, blackout, 'puzzle');
+    call(h, blackout, 'fight');
+    expect(shown.filter((id) => id.startsWith('c2.call.') && !id.endsWith('.blackout'))).toEqual(['c2.call.puzzle']);
+    expect(shown.filter((id) => id === 'myko.call.again')).toHaveLength(1);
+    expect(shown).not.toContain('myko.call.allThree');
+    expect(shown.indexOf('c2.call.puzzle')).toBeLessThan(shown.indexOf('myko.call.again'));
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DESIGN.md 7.5: each of the three calls has its own blackout cards,
+// myko.call.<kind>.blackout.<n>, n = which call of the save, whatever the chapter.
+// ---------------------------------------------------------------------------
+
+describe('blackout caption id (nth call of the save)', () => {
+  const KINDS = ['fight', 'puzzle'] as const;
+  const ALL_IDS = KINDS.flatMap((k) => [1, 2, 3].map((n) => `myko.call.${k}.blackout.${n}`));
+
+  function fakeSeq(kinds: CompletableKind[], chapterOf: (i: number) => 1 | 2 | 9 = () => 1) {
+    let i = 0;
+    const f = fakeHost({ target: () => ({ completable: fakeCompletable(`c1.${kinds[i]}.s${i}`, kinds[i]), entrance: null }) });
+    f.host.chapter = () => chapterOf(i);
+    const seen = record(f.bus, 'myko:blackout');
+    const run = (): boolean => {
+      const ok = f.myko.tryCall();
+      const last = seen.at(-1);
+      if (ok && last) f.myko.blackoutFinished(last.sequenceId);
+      i++;
+      return ok;
+    };
+    return { f, seen, run };
+  }
+
+  it('first, second and third call emit .1, .2, .3', () => {
+    const { seen, run } = fakeSeq(['fight', 'fight', 'fight']);
+    run();
+    run();
+    run();
+    expect(seen.map((b) => b.sequenceId)).toEqual(['myko.call.fight.blackout.1', 'myko.call.fight.blackout.2', 'myko.call.fight.blackout.3']);
+  });
+
+  it('n does not depend on the chapter the call is made in', () => {
+    const { seen, run } = fakeSeq(['puzzle', 'fight', 'puzzle'], (i) => (i === 1 ? 2 : i === 2 ? 9 : 1));
+    run();
+    run();
+    run();
+    expect(seen.map((b) => b.sequenceId)).toEqual(['myko.call.puzzle.blackout.1', 'myko.call.fight.blackout.2', 'myko.call.puzzle.blackout.3']);
+  });
+
+  it('a refused call does not advance n', () => {
+    // No calls left is refused; the Administrator is refused with calls left.
+    const admin = fakeHost({ target: () => ({ completable: fakeCompletable('c10.boss.administrator', 'boss'), entrance: null }) });
+    const adminSeen = record(admin.bus, 'myko:blackout');
+    expect(admin.myko.tryCall()).toBe(false);
+    expect(adminSeen).toEqual([]);
+    expect(admin.state.calls).toBe(TUNING.myko.callsPerGame);
+    const f = fakeHost({ calls: 0, target: () => ({ completable: fakeCompletable('c1.fight.a', 'fight'), entrance: null }) });
+    const seen = record(f.bus, 'myko:blackout');
+    expect(f.myko.tryCall()).toBe(false);
+    expect(f.myko.tryCall()).toBe(false);
+    expect(seen).toEqual([]);
+    f.state.calls = TUNING.myko.callsPerGame;
+    expect(f.myko.tryCall()).toBe(true);
+    expect(seen.map((b) => b.sequenceId)).toEqual(['myko.call.fight.blackout.1']);
+    // Blocked while a blackout is running: a second hold does not advance it either.
+    expect(f.myko.tryCall()).toBe(false);
+    f.myko.blackoutFinished('myko.call.fight.blackout.1');
+    expect(f.myko.tryCall()).toBe(true);
+    expect(seen.at(-1)?.sequenceId).toBe('myko.call.fight.blackout.2');
+  });
+
+  it('a deduction uses puzzle; a boss uses fight; set pieces and fights use fight', () => {
+    const cases: [CompletableKind, string][] = [
+      ['deduction', 'puzzle'],
+      ['puzzle', 'puzzle'],
+      ['boss', 'fight'],
+      ['fight', 'fight'],
+      ['setpiece', 'fight'],
+    ];
+    for (const [kind, expected] of cases) {
+      const f = fakeHost({ target: () => ({ completable: fakeCompletable(`c3.${kind}.x`, kind), entrance: null }) });
+      const seen = record(f.bus, 'myko:blackout');
+      f.myko.tryCall();
+      expect(seen.map((b) => b.sequenceId), kind).toEqual([`myko.call.${expected}.blackout.1`]);
+    }
+  });
+
+  it('blackoutFinished accepts only the current id; old-format and other-n ids are ignored', () => {
+    const f = fakeHost({ target: () => ({ completable: fakeCompletable('c1.fight.a', 'fight'), entrance: null }) });
+    f.state.calls = 2; // second call of the save
+    const seen = record(f.bus, 'myko:blackout');
+    f.myko.tryCall();
+    expect(seen.map((b) => b.sequenceId)).toEqual(['myko.call.fight.blackout.2']);
+    for (const wrong of ['c1.call.fight.blackout', 'myko.call.fight.blackout.1', 'myko.call.fight.blackout.3', 'myko.call.puzzle.blackout.2', 'myko.call.fight.blackout']) {
+      expect(f.myko.blackoutFinished(wrong), wrong).toBe(false);
+      expect(f.myko.callInProgress).toBe(true);
+    }
+    expect(f.myko.blackoutFinished('myko.call.fight.blackout.2')).toBe(true);
+    expect(f.myko.callInProgress).toBe(false);
+  });
+
+  it('n carries across chapters and survives a save and reload (sandbox run)', () => {
+    const h = makeRun();
+    const b1 = record(h.bus, 'myko:blackout');
+    teleport(h.run, ...([22, 13] as const));
+    h.run.tick(16, NO_INPUT);
+    holdM(h.run, TUNING.myko.callHoldMs);
+    expect(b1.map((b) => b.sequenceId)).toEqual(['myko.call.fight.blackout.1']);
+    finishBlackout(h, b1);
+    h.run.dialogue.finishAll();
+    const saved = h.saves.at(-1)?.state;
+    if (!saved) throw new Error('no save');
+    // Reload into chapter 2 with that save's call record: the next call is the second of the save.
+    const h2 = makeRun({ chapter: 2, save: (base) => ({ ...base, mykoCallsLeft: saved.mykoCallsLeft, mykoCalls: saved.mykoCalls }) });
+    const b2 = record(h2.bus, 'myko:blackout');
+    h2.run.startSection('c1.puzzle.kegs');
+    h2.run.tick(16, NO_INPUT);
+    holdM(h2.run, TUNING.myko.callHoldMs);
+    expect(b2.map((b) => b.sequenceId)).toEqual(['myko.call.puzzle.blackout.2']);
+    // And reloading the same chapter gives the same n.
+    const h3 = makeRun({ save: () => saved });
+    const b3 = record(h3.bus, 'myko:blackout');
+    h3.run.startSection('c1.puzzle.kegs');
+    h3.run.tick(16, NO_INPUT);
+    holdM(h3.run, TUNING.myko.callHoldMs);
+    expect(b3.map((b) => b.sequenceId)).toEqual(['myko.call.puzzle.blackout.2']);
+  });
+
+  describe('content', () => {
+    it.each(ALL_IDS)('%s exists as a caption sequence with narrator cards', (id) => {
+      expect(hasSequence(id)).toBe(true);
+      const s = sequence(id);
+      expect(s.delivery).toBe('caption');
+      expect(s.lines.length).toBeGreaterThan(0);
+      for (const line of s.lines) {
+        expect(line.speaker).toBe('narrator');
+        expect(line.text.trim().length).toBeGreaterThan(0);
+      }
+    });
+
+    it('no card contains an exclamation mark', () => {
+      for (const id of ALL_IDS) for (const line of sequence(id).lines) expect(line.text, id).not.toContain('!');
+    });
+
+    it('no two of the six share a card', () => {
+      const all = ALL_IDS.flatMap((id) => sequence(id).lines.map((l) => l.text));
+      expect(new Set(all).size).toBe(all.length);
+    });
   });
 });
