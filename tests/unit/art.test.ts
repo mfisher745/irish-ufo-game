@@ -3,6 +3,7 @@
 import { describe, expect, it } from 'vitest';
 import { FONT_CHARS, canDraw } from '../../src/art/font';
 import { FONT_CELL, TEX, animKey, frameName, fx, icon, portrait, tilesetKey } from '../../src/art/keys';
+import { ANDREW, MYKO } from '../../src/art/characters';
 import { PALETTE, REGION_COLOURS, SHARED_COLOURS, css } from '../../src/art/palette';
 import type { ColourName } from '../../src/art/palette';
 import { PixelBuffer } from '../../src/art/pixels';
@@ -109,14 +110,14 @@ describe('allSheets()', () => {
 describe('characters', () => {
   const cell = (s: Sheet) => ({ w: s.frames[0]?.width, h: s.frames[0]?.height });
 
-  it('Andrew\'s cell is 16 x 24 and Myko\'s is 16 x 32', () => {
-    expect(cell(byKey(TEX.andrew))).toEqual({ w: 16, h: 24 });
+  it('Andrew\'s cell is 16 x 28 and Myko\'s is 16 x 32', () => {
+    expect(cell(byKey(TEX.andrew))).toEqual({ w: 16, h: 28 });
     expect(cell(byKey(TEX.myko))).toEqual({ w: 16, h: 32 });
-    for (const f of byKey(TEX.andrew).frames) expect([f.width, f.height]).toEqual([16, 24]);
+    for (const f of byKey(TEX.andrew).frames) expect([f.width, f.height]).toEqual([16, 28]);
     for (const f of byKey(TEX.myko).frames) expect([f.width, f.height]).toEqual([16, 32]);
   });
 
-  it('the height difference is obvious: Myko is at least 8 px taller in drawn pixels', () => {
+  it('the height difference is about half a head (DESIGN.md 8): Myko is taller by more than a third of a head and less than a whole one', () => {
     const extent = (s: Sheet): number => {
       const f = s.frames.find((x) => x.name === frameName('idle', 'down', 0));
       if (!f) throw new Error('no idle.down.0');
@@ -128,7 +129,14 @@ describe('characters', () => {
       }
       return bottom - top + 1;
     };
-    expect(extent(byKey(TEX.myko)) - extent(byKey(TEX.andrew))).toBeGreaterThanOrEqual(8);
+    // DESIGN.md 8: "about half a head shorter, and the difference must be obvious". Heads are 7 px tall in both looks.
+    const head = ANDREW.headHeight;
+    expect(MYKO.headHeight).toBe(head);
+    const diff = extent(byKey(TEX.myko)) - extent(byKey(TEX.andrew));
+    expect(diff).toBeGreaterThanOrEqual(Math.ceil(head / 3)); // obvious: at least ~2.3 -> 3 px
+    expect(diff).toBeLessThan(head); // but well under a whole head
+    expect(Math.abs(diff - head / 2)).toBeLessThanOrEqual(1.5); // about half a head
+    expect(diff).toBe(32 - 28); // and the cell heights agree
   });
 
   it('Andrew has every animation in the style guide in all four directions', () => {
