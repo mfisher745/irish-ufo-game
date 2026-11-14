@@ -187,7 +187,8 @@ export function fxSheet(): Sheet {
       b.ellipse(1 + i, 1 + i, 14 - i * 2, 14 - i * 2, c).ellipse(3 + i, 3 + i, 10 - i * 2, 10 - i * 2, null);
     }),
   );
-  fx.smokePuff.forEach((name, i) => sheet.cell(name, (b) => void b.ellipse(6 - i, 7 - i * 2, 4 + i * 2, 4 + i, i === 2 ? 'steel' : 'fog')));
+  // A 16x16 cell, filled by the last frame: the puff grows from 8x8 to 16x12 as it rises.
+  fx.smokePuff.forEach((name, i) => sheet.cell(name, (b) => void b.ellipse(4 - i * 2, 6 - i * 3, 8 + i * 4, 8 + i * 2, i === 2 ? 'steel' : 'fog')));
   sheet.cell(fx.shadow, (b) => void b.ellipse(2, 10, 12, 5, 'ink'));
   sheet.cell(fx.groundMarker, (b) => {
     b.ellipse(0, 0, 16, 16, 'alarm').ellipse(1, 1, 14, 14, null);

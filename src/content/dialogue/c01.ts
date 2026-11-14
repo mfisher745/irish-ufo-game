@@ -75,7 +75,7 @@ export const C01: DialogueFile = {
       ['andrew', 'I’ll be in.'],
       ['dympna', 'I know you will. The knee is at me again, Doctor.'],
       ['andrew', "I can't look at it, Dympna."],
-      ['dympna', 'I know you can’t. I’m only telling you.'],
+      ['dympna', 'I know you can’t. You can’t charge for it, anyhow. I was only telling you.'],
     ),
 
     // Optional examines
