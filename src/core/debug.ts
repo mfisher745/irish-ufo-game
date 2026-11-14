@@ -4,6 +4,8 @@
  *
  * - `?chapter=N` starts chapter N with Chapter Select rules.
  * - `?sandbox=1` starts the dev sandbox.
+ * - `?debug=1` draws the debug shapes (checkpoints, areas, radii); combine
+ *   with the others, e.g. `?chapter=1&debug=1`.
  * - `window.__game` exposes the session for scripted playthroughs.
  */
 
@@ -21,6 +23,11 @@ export function parseDebugEntry(search: string): DebugEntry {
     if (Number.isInteger(n) && n >= 1 && n <= 10) return { kind: 'chapter', chapter: n as ChapterNumber };
   }
   return null;
+}
+
+/** Whether `?debug=1` asks for the debug shapes in the world view. */
+export function debugDrawEnabled(search: string): boolean {
+  return new URLSearchParams(search).get('debug') === '1';
 }
 
 /** Hooks QA drives from Playwright via `page.evaluate`. */

@@ -4,6 +4,7 @@
  */
 
 import { TUNING } from '../../content/tuning';
+import { SPECIAL_ABILITIES } from '../../core/types';
 import type { AbilityId, BossId, BuzzState, DrinkId, SpecialAbilityId, TextId } from '../../core/types';
 import { HEALTH_PIPS } from '../layout';
 import type { UiStateSource } from '../contract';
@@ -15,6 +16,9 @@ export interface HudSlotView {
   readonly count: number;
   readonly selected: boolean;
 }
+
+/** Why the selected special cannot be used right now. */
+export type SpecialReason = 'sober' | 'buzz' | 'recharge';
 
 export interface HudModel {
   /** One entry per pip shown; fewer pips under a hangover (lower max health). */
@@ -32,6 +36,12 @@ export interface HudModel {
   readonly heat: { readonly fraction: number } | null;
   readonly slots: readonly [HudSlotView, HudSlotView, HudSlotView];
   readonly empties: number;
+  /** Bottle Throw is unlocked: the empties slot is live rather than dimmed. */
+  readonly throwUnlocked: boolean;
+  /** The melee ability shown with the left mouse button, or null before any is unlocked. */
+  readonly melee: AbilityId | null;
+  /** The Stumble is unlocked: the dodge slot (Space) is shown. */
+  readonly dodgeUnlocked: boolean;
   readonly special: {
     readonly abilityId: SpecialAbilityId | null;
     /** Name, or the "Sober" label when none is selectable. */
@@ -39,6 +49,12 @@ export interface HudModel {
     readonly iconAbility: AbilityId | null;
     /** Specials are locked by Buzz state: draw dimmed. */
     readonly locked: boolean;
+    /** Show the slot at all: at least one special is unlocked. */
+    readonly shown: boolean;
+    /** More than one special is unlocked, so R (cycle) is shown too. */
+    readonly cyclable: boolean;
+    /** Why it cannot be used now, when it cannot. */
+    readonly reason: SpecialReason | null;
   };
   /** One flag per call in the game: true if still available, false for an ink stub. */
   readonly calls: readonly boolean[];
@@ -75,6 +91,15 @@ export function buildHudModel(source: UiStateSource): HudModel {
   const calls = TUNING.myko.callsPerGame;
   const left = source.mykoCallsLeft();
   const specialsUnlocked = TUNING.buzz.effects[buzz.state].specialsUnlocked;
+  const unlocked = source.unlockedAbilities();
+  const unlockedSpecials = SPECIAL_ABILITIES.filter((id) => unlocked.includes(id));
+  let reason: SpecialReason | null = null;
+  if (special !== null) {
+    const cost = TUNING.abilities[special].cost;
+    if (!specialsUnlocked) reason = 'sober';
+    else if (cost.kind === 'buzz' && buzz.value < cost.amount) reason = 'buzz';
+    else if (cost.kind === 'recharge' && (source.specialRecharge?.() ?? 0) > 0) reason = 'recharge';
+  }
   const view = (i: 0 | 1 | 2): HudSlotView => {
     const slot = slots[i];
     return { drinkId: slot?.drinkId ?? null, count: slot?.count ?? 0, selected: selectedIndex === i };
@@ -93,11 +118,17 @@ export function buildHudModel(source: UiStateSource): HudModel {
     heat: heat.active ? { fraction: clamp01(heat.value / TUNING.heat.max) } : null,
     slots: [view(0), view(1), view(2)],
     empties: source.empties(),
+    throwUnlocked: unlocked.includes('bottleThrow'),
+    melee: unlocked.includes('hurley') ? 'hurley' : unlocked.includes('punchCombo') ? 'punchCombo' : null,
+    dodgeUnlocked: unlocked.includes('stumble'),
     special: {
       abilityId: special,
       labelTextId: special === null ? 'ui.hud.noSpecial' : `ability.${special}.name`,
       iconAbility: special,
-      locked: special === null || !specialsUnlocked,
+      locked: special === null || reason !== null,
+      shown: unlockedSpecials.length > 0 || special !== null,
+      cyclable: unlockedSpecials.length > 1,
+      reason,
     },
     calls: Array.from({ length: calls }, (_, i) => i < left),
     callHold: clamp01(source.mykoCallHoldProgress()),

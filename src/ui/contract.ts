@@ -36,6 +36,8 @@ export interface UiStateSource {
   selectedDrink(): DrinkSlotIndex;
   selectedSpecial(): SpecialAbilityId | null;
   unlockedAbilities(): readonly AbilityId[];
+  /** 0..1 how much of the Borrowed Glove's recharge is left (1 = just used). Optional: the HUD shows no recharge without it. */
+  specialRecharge?(): number;
   mykoCallsLeft(): number;
   /** 0..1 progress of the M hold; 0 when not held. */
   mykoCallHoldProgress(): number;

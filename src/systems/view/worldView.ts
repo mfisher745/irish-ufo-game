@@ -3,6 +3,12 @@
  * it; never changes it. Uses generated art from `src/art/` when a texture
  * exists and falls back to tinted rectangles when it does not, so the game
  * runs before (or without) the art. docs/style-guide.md sections 3 and 4.
+ *
+ * In normal play nothing is drawn that is not part of the world (DESIGN.md
+ * 8): telegraphs, vision cones, health bars and the aim reticle stay because
+ * they are gameplay. Checkpoints, exits, examinable boxes, hiding-prop radii,
+ * sensor and mast ranges and push-puzzle bounds are drawn only with
+ * `?debug=1` (`WorldViewOptions.debug`).
  */
 
 import Phaser from 'phaser';
@@ -13,6 +19,17 @@ import { facingFromAngle, fromAngle, toRad } from '../geometry';
 import { TILE } from '../grid';
 import type { ChapterRun } from '../run';
 import { DressingView } from './dressingView';
+import { ObjectsView } from './objectsView';
+
+export interface WorldViewOptions {
+  /** Draw the debug shapes (checkpoints, areas, radii). `?debug=1`. */
+  readonly debug?: boolean;
+}
+
+/** Andrew's sprite height (16 x 28) and Myko's (16 x 32); feet are at `pos.y + FEET_OFFSET`. */
+const ANDREW_H = 28;
+const MYKO_H = 32;
+const FEET_OFFSET = 4;
 
 type Body = Phaser.GameObjects.Sprite | Phaser.GameObjects.Rectangle;
 
@@ -29,18 +46,25 @@ export class WorldView {
   private readonly g: Phaser.GameObjects.Graphics;
   private readonly bodies = new Map<string, KeyedBody>();
   private readonly dressing: DressingView;
+  private readonly objects: ObjectsView;
+  private readonly debug: boolean;
   private screenId = '';
   readonly playerBody: Body;
   private readonly mykoBody: Body;
+  private mykoWasSmoking = false;
+  private lastSync = -1;
 
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly run: ChapterRun,
+    opts: WorldViewOptions = {},
   ) {
+    this.debug = opts.debug === true;
     this.g = scene.add.graphics().setDepth(10000);
-    this.playerBody = this.makeBody(TEX.andrew, 16, 24, PALETTE.anorak);
-    this.mykoBody = this.makeBody(TEX.myko, 16, 32, PALETTE.mykoCoat);
+    this.playerBody = this.makeBody(TEX.andrew, 16, ANDREW_H, PALETTE.anorak);
+    this.mykoBody = this.makeBody(TEX.myko, 16, MYKO_H, PALETTE.mykoCoat);
     this.dressing = new DressingView(scene, run);
+    this.objects = new ObjectsView(scene, run);
     this.buildScreen();
   }
 
@@ -54,7 +78,7 @@ export class WorldView {
       this.playerBody.setAlpha(p.invulnerable && !p.protected_ ? 0.5 : 1);
       this.playerBody.setFillStyle(p.incapacitated ? PALETTE.fog : PALETTE.anorak);
     }
-    this.place(this.mykoBody, r.myko.pos, TEX.myko, 'idle', 'down');
+    this.syncMyko();
 
     const seen = new Set<string>();
     for (const a of r.enemies()) {
@@ -79,7 +103,31 @@ export class WorldView {
       }
     }
     this.dressing.sync();
+    const now = this.scene.time.now;
+    const dt = this.lastSync < 0 ? 0 : now - this.lastSync;
+    this.lastSync = now;
+    this.objects.sync(dt, { x: r.myko.pos.x, y: r.myko.pos.y + FEET_OFFSET - MYKO_H });
     this.drawDynamic();
+  }
+
+  /** Walks when moving; the `smoke` animation once when a smoke starts, then idle. */
+  private syncMyko(): void {
+    const m = this.run.myko;
+    const body = this.mykoBody;
+    const startSmoke = m.smoking && !this.mykoWasSmoking;
+    this.mykoWasSmoking = m.smoking;
+    const smokeKey = animKey(TEX.myko, 'smoke', m.facing);
+    if (body instanceof Phaser.GameObjects.Sprite) {
+      if (startSmoke && this.scene.anims.exists(smokeKey)) {
+        body.play(smokeKey);
+      }
+      const smokingAnim = body.anims.isPlaying && body.anims.currentAnim?.key === smokeKey;
+      if (smokingAnim && !m.moving) {
+        body.setPosition(Math.round(m.pos.x), Math.round(m.pos.y + FEET_OFFSET)).setDepth(m.pos.y);
+        return;
+      }
+    }
+    this.place(body, m.pos, TEX.myko, m.moving ? 'walk' : 'idle', m.facing);
   }
 
   destroy(): void {
@@ -88,6 +136,7 @@ export class WorldView {
     for (const b of this.bodies.values()) b.body.destroy();
     this.bodies.clear();
     this.dressing.destroy();
+    this.objects.destroy();
     this.g.destroy();
     this.playerBody.destroy();
     this.mykoBody.destroy();
@@ -126,7 +175,7 @@ export class WorldView {
         if (!blocked) g.lineStyle(1, PALETTE.ink, 0.25).strokeRect(col * TILE, row * TILE, TILE, TILE);
       }
     }
-    for (const ex of layout.exits) g.fillStyle(PALETTE.amberLight, 0.6).fillRect(ex.area.x, ex.area.y, ex.area.width, ex.area.height);
+    if (this.debug) for (const ex of layout.exits) g.fillStyle(PALETTE.amberLight, 0.6).fillRect(ex.area.x, ex.area.y, ex.area.width, ex.area.height);
     // A screen smaller than the view is centred; the camera background (the void tile's ink) fills the rest.
     const cam = this.scene.cameras.main;
     const w = grid.widthTiles * TILE;
@@ -142,36 +191,8 @@ export class WorldView {
     const r = this.run;
     g.clear();
 
-    // Checkpoints, examinables, pickups.
-    for (const cp of r.module.def.checkpoints) {
-      if (cp.screenId !== r.screenId) continue;
-      g.lineStyle(1, PALETTE.white, 0.5).strokeCircle(cp.position.x, cp.position.y, 6);
-    }
-    for (const e of r.examinablesHere()) {
-      g.fillStyle(PALETTE.amberLight, 0.9).fillTriangle(e.position.x - 4, e.position.y - 10, e.position.x + 4, e.position.y - 10, e.position.x, e.position.y - 4);
-      g.lineStyle(1, PALETTE.amberLight, 0.8).strokeRect(e.position.x - 5, e.position.y - 5, 10, 10);
-    }
-    for (const p of r.pickups()) {
-      const c = p.item.kind === 'food' ? PALETTE.bone : p.item.kind === 'empties' ? PALETTE.fog : PALETTE.amber;
-      g.fillStyle(c, 1).fillRect(p.def.position.x - 3, p.def.position.y - 5, 6, 10);
-    }
-    // Push puzzles.
-    for (const { puzzle, placement } of r.pushPuzzlesHere()) {
-      const a = placement.layout.area;
-      g.lineStyle(1, PALETTE.amberLight, 0.3).strokeRect(a.col * TILE, a.row * TILE, a.width * TILE, a.height * TILE);
-      for (const f of placement.layout.fixed) g.fillStyle(PALETTE.turfDark, 1).fillRect(f.col * TILE + 1, f.row * TILE + 1, TILE - 2, TILE - 2);
-      for (const c of placement.layout.goal.cells) g.lineStyle(1, PALETTE.grass, 0.7).strokeRect(c.col * TILE + 3, c.row * TILE + 3, TILE - 6, TILE - 6);
-      for (const piece of puzzle.pieceDrawPositions()) {
-        g.fillStyle(PALETTE.peat, 1).fillRect(piece.pos.x - 7, piece.pos.y - 7, 14, 14);
-        g.lineStyle(1, PALETTE.turfDark, 1).strokeRect(piece.pos.x - 7, piece.pos.y - 7, 14, 14);
-      }
-    }
-    // Hiding props.
-    for (const { runner } of r.stealthHere()) {
-      for (const prop of runner.def.hidingProps) {
-        g.lineStyle(1, PALETTE.white, 0.6).strokeCircle(prop.position.x, prop.position.y, prop.radius);
-      }
-    }
+    // Pickups, examinables, puzzle pieces and Myko's smoke are world sprites (ObjectsView).
+    if (this.debug) this.drawDebug();
 
     // Vision cones and detection.
     for (const { runner } of r.stealthHere()) {
@@ -184,8 +205,8 @@ export class WorldView {
       for (const h of runner.hazards) {
         const c = h.cone();
         if (c && h.enabled) this.cone(h.pos, h.facingDeg, c.range, c.angleDeg, h.detection > 0 ? PALETTE.alarm : PALETTE.amberLight);
-        if (h.def.kind === 'groundSensor') g.lineStyle(1, h.enabled ? PALETTE.alarm : PALETTE.steel, 0.5).strokeCircle(h.pos.x, h.pos.y, h.def.radius);
-        if (h.def.kind === 'thermalMast') g.lineStyle(1, PALETTE.amber, 0.4).strokeCircle(h.pos.x, h.pos.y, h.def.range);
+        if (this.debug && h.def.kind === 'groundSensor') g.lineStyle(1, h.enabled ? PALETTE.alarm : PALETTE.steel, 0.5).strokeCircle(h.pos.x, h.pos.y, h.def.radius);
+        if (this.debug && h.def.kind === 'thermalMast') g.lineStyle(1, PALETTE.amber, 0.4).strokeCircle(h.pos.x, h.pos.y, h.def.range);
         if (h.detection > 0) this.bar(h.pos.x - 8, h.pos.y - 14, 16, h.detection, PALETTE.alarm);
       }
     }
@@ -238,7 +259,48 @@ export class WorldView {
     const pl = r.player;
     g.lineStyle(1, PALETTE.white, 0.6).strokeCircle(pl.aimPoint.x, pl.aimPoint.y, 3);
     const charge = pl.abilities.chargeProgress();
-    if (charge > 0) this.bar(pl.pos.x - 8, pl.pos.y - 22, 16, charge, PALETTE.amberLight);
+    // Just above Andrew's head (his sprite is ANDREW_H tall, feet at pos.y + FEET_OFFSET).
+    if (charge > 0) this.bar(pl.pos.x - 8, pl.pos.y + FEET_OFFSET - ANDREW_H - 3, 16, charge, PALETTE.amberLight);
+  }
+
+  /** `?debug=1`: checkpoints, examinable boxes, triggers, section areas, entrances, spawn points, hiding radii, puzzle bounds. */
+  private drawDebug(): void {
+    const g = this.g;
+    const r = this.run;
+    const here = r.screenId;
+    const area = (a: { x: number; y: number; width: number; height: number }, colour: number): void => void g.lineStyle(1, colour, 0.6).strokeRect(a.x, a.y, a.width, a.height);
+    const dot = (p: Vec2, colour: number): void => void g.fillStyle(colour, 0.8).fillCircle(p.x, p.y, 2);
+    for (const cp of r.module.def.checkpoints) if (cp.screenId === here) g.lineStyle(1, PALETTE.white, 0.5).strokeCircle(cp.position.x, cp.position.y, 6);
+    for (const e of r.examinablesHere()) {
+      g.fillStyle(PALETTE.amberLight, 0.9).fillTriangle(e.position.x - 4, e.position.y - 10, e.position.x + 4, e.position.y - 10, e.position.x, e.position.y - 4);
+      g.lineStyle(1, PALETTE.amberLight, 0.8).strokeRect(e.position.x - 5, e.position.y - 5, 10, 10);
+    }
+    for (const t of r.module.triggers) if (t.screenId === here) area(t.area, PALETTE.magenta);
+    for (const f of r.module.fights) {
+      if (f.screenId !== here) continue;
+      if (f.trigger.kind === 'area') area(f.trigger.area, PALETTE.alarm);
+      dot(f.entrance, PALETTE.lime);
+      for (const s of f.spawnPoints) dot(s, PALETTE.alarm);
+    }
+    for (const b of r.module.bosses) {
+      if (b.screenId !== here) continue;
+      if (b.trigger.kind === 'area') area(b.trigger.area, PALETTE.alarm);
+      if (b.exitArea) area(b.exitArea, PALETTE.lime);
+      dot(b.entrance, PALETTE.lime);
+    }
+    for (const s of r.module.stealth) {
+      if (s.screenId !== here) continue;
+      area(s.startArea, PALETTE.amber);
+      area(s.exitArea, PALETTE.lime);
+      dot(s.entrance, PALETTE.lime);
+    }
+    for (const { placement } of r.pushPuzzlesHere()) {
+      const a = placement.layout.area;
+      g.lineStyle(1, PALETTE.amberLight, 0.3).strokeRect(a.col * TILE, a.row * TILE, a.width * TILE, a.height * TILE);
+    }
+    for (const { runner } of r.stealthHere()) {
+      for (const prop of runner.def.hidingProps) g.lineStyle(1, PALETTE.white, 0.6).strokeCircle(prop.position.x, prop.position.y, prop.radius);
+    }
   }
 
   private telegraph(a: EnemyActor): void {
@@ -307,7 +369,7 @@ export class WorldView {
 
   /** Positions a body by its feet; plays an animation when one exists. */
   private place(body: Body, pos: Vec2, textureKey: string, anim: string, facing: Facing): void {
-    body.setPosition(Math.round(pos.x), Math.round(pos.y + 4));
+    body.setPosition(Math.round(pos.x), Math.round(pos.y + FEET_OFFSET));
     body.setDepth(pos.y);
     if (body instanceof Phaser.GameObjects.Sprite) {
       const key = animKey(textureKey, anim, facing);
