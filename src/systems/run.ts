@@ -1087,6 +1087,7 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       stealthUncaught: () => [...this.stealthRunners.values()].some((s) => s.runner.active),
       callsLeft: () => this.callsLeft,
       callLines: (kind: MykoCallKind): MykoCallLineSet | null => this.module.def.mykoCallLines[kind] ?? null,
+      callsThisChapter: () => this.calls.filter((c) => c.chapter === this.chapter).length,
       spendCall: (sectionId, kind) => {
         this.callsLeft = Math.max(0, this.callsLeft - 1);
         this.calls.push({ chapter: this.chapter, sectionId, kind });
