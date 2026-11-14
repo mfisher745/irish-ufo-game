@@ -1,13 +1,18 @@
 /**
  * The blackout when Myko is called in. DESIGN.md section 7.5: the screen cuts
- * to black and two or three narrator cards say, flatly, how little time it
- * took and how little trouble it was. The player never sees how.
+ * to black and three narrator cards say, flatly, how little time it took and
+ * how little trouble it was. The player never sees how.
  *
- * IDs: `c<N>.call.fight.blackout` and `c<N>.call.puzzle.blackout`. The scene
- * that follows (`c<N>.call.fight`, `c<N>.call.puzzle`) is in the chapter file.
+ * There are three calls in the game and each has its own cutscene, so no two
+ * calls ever show the same cards. IDs: `myko.call.<kind>.blackout.<n>`, where
+ * kind is `fight` or `puzzle` and n is 1, 2 or 3: the first, second or third
+ * call of the save, whatever the chapter. The scene that follows is the
+ * chapter's own (`c<N>.call.fight`, `c<N>.call.puzzle`) or one of the shared
+ * ones in common.ts.
  *
  * Rules for these cards: no exclamation marks, no description of the method,
- * times and small domestic details only. Understate.
+ * times and small domestic details only. Understate. The second call is the
+ * Batman one.
  */
 
 import type { DialogueSequence } from '../../core/types';
@@ -24,34 +29,21 @@ const blackout = (id: string, ...cards: string[]): DialogueSequence =>
 export const CALLINS: DialogueFile = {
   text: {},
   sequences: [
-    blackout('c1.call.fight.blackout', 'Four seconds pass.', 'Myko does not take his hands out of his pockets.', 'Somebody apologises. It is not Myko.'),
-    blackout('c1.call.puzzle.blackout', 'Myko looks at the kegs.', 'The kegs reconsider.'),
+    // First call of the game.
+    blackout('myko.call.fight.blackout.1', 'What happens next takes four seconds.', 'Myko keeps one hand in his pocket throughout. The other has the rollie.', 'Somebody says sorry. It is not Myko.'),
+    blackout('myko.call.puzzle.blackout.1', 'Myko looks at it.', 'This takes as long as it takes to look at something.', 'Then it is done, and he is looking at Andrew instead.'),
 
-    blackout('c2.call.fight.blackout', 'Three seconds.', 'A gate creaks. A cousin sits down in a trough.', 'Myko relights his rollie.'),
-    blackout('c2.call.puzzle.blackout', 'Myko says one word to the sheep.', 'It is not a word Andrew knows.', 'The sheep know it.'),
+    // Second call.
+    blackout(
+      'myko.call.fight.blackout.2',
+      'Batman trained for twelve years, on several continents.',
+      'Myko did most of a welding course in Carrick.',
+      'It takes Myko three seconds. Batman would still be up on the roof, waiting for the right moment.',
+    ),
+    blackout('myko.call.puzzle.blackout.2', 'Batman has a cave full of computers for this kind of thing.', 'Myko has a lighter and a bus timetable from 2019.', 'Myko is finished first.'),
 
-    blackout('c3.call.fight.blackout', 'Five seconds, most of it walking.', 'A clipboard is involved.', 'The night shift goes on its break early.'),
-    blackout('c3.call.puzzle.blackout', 'One push.', 'It was the crate Andrew had been leaning on.'),
-
-    blackout('c4.call.fight.blackout', 'Six seconds.', 'Myko does not put down his drink.', 'Colleen-Ann loses count of the glasses, then of the men.'),
-    blackout('c4.call.puzzle.blackout', 'One lever.', 'Three containers settle into a staircase with a sound like a polite cough.'),
-
-    blackout('c5.call.fight.blackout', 'Nine agents. Four seconds.', 'A lanyard is used for something lanyards are not for.', 'Nobody spills the yoghurt.'),
-    blackout('c5.call.puzzle.blackout', 'Myko picks three sheets without turning them over.', 'He was reading the backs on the way in.'),
-
-    blackout('c6.call.fight.blackout', 'Three seconds.', 'An ice bucket leaves Myko’s hand and comes back to it.', 'He says sorry to each drone in turn.'),
-    blackout('c6.call.puzzle.blackout', 'Myko walks the formation once.', 'He does not look at the postcard. He has been looking at it for two days.'),
-
-    blackout('c7.call.fight.blackout', 'Four seconds.', 'A snow globe is returned to its shelf, shaken.', 'It is the only thing in the yard still upright.'),
-    blackout('c7.call.puzzle.blackout', 'Myko asks which of them are aliens.', 'Three hands go up.'),
-
-    blackout('c8.call.fight.blackout', 'Five seconds, uphill.', 'Myko does not take off the coat.', 'The truck’s headlights go out, one, then the other.'),
-    blackout('c8.call.puzzle.blackout', 'One switch.', 'It was the one Andrew was standing beside.'),
-
-    blackout('c9.call.fight.blackout', 'Three seconds.', 'A shield is borrowed and handed back.', 'Somebody files a report about it before he reaches the ground.'),
-    blackout('c9.call.puzzle.blackout', 'Myko presses one button and leans.', 'Everything else in the room falls the way he meant.'),
-
-    blackout('c10.call.fight.blackout', 'Myko takes a ticket. Number 849.', 'He is seen at once.', 'It takes four seconds.'),
-    blackout('c10.call.puzzle.blackout', 'Five plugs. Five sockets. No looking.', 'He leaves the button.'),
+    // Third and last call.
+    blackout('myko.call.fight.blackout.3', 'Two seconds.', 'He is getting quicker. Nobody knows what he practises on.', 'The rollie does not go out. It would not dare.'),
+    blackout('myko.call.puzzle.blackout.3', 'One move.', 'It was the first thing Andrew tried, done properly.', 'Myko says nothing. It is worse than if he had said something.'),
   ],
 };
