@@ -33,6 +33,7 @@ export type EffectId =
   | 'enemyDown'
   | 'abilityUnlocked'
   | 'thud'
+  | 'swing'
   | 'smallCrash'
   | 'breakWood'
   | 'breakGlass';
@@ -41,7 +42,7 @@ export const EFFECT_IDS: readonly EffectId[] = [
   'hit', 'haymaker', 'hurley', 'bottleThrow', 'bottleSmash', 'drink', 'footstep', 'hurt', 'fallOver', 'pickup',
   'refuse', 'alarm', 'detectionTick', 'door', 'push', 'uiMove', 'uiSelect', 'save', 'blipAndrew', 'blipMyko',
   'blipOther', 'blipAlien', 'mykoCallIn', 'bossPhase', 'stun', 'fire', 'sliotar', 'deflect', 'heatWarning',
-  'enemyDown', 'abilityUnlocked', 'thud', 'smallCrash', 'breakWood', 'breakGlass',
+  'enemyDown', 'abilityUnlocked', 'thud', 'swing', 'smallCrash', 'breakWood', 'breakGlass',
 ];
 
 export interface Synth {
@@ -264,6 +265,10 @@ export function renderEffect(id: EffectId, s: Synth, t: number): void {
     case 'thud':
       tone(s, { type: 'sine', f0: 95, f1: 42, t, dur: 0.22, gain: 0.8 });
       noiseBurst(s, { t, dur: 0.07, gain: 0.3, f0: 500, f1: 120 });
+      break;
+    case 'swing':
+      // A short dry whoosh for a punch that may hit nothing.
+      noiseBurst(s, { t, dur: 0.09, gain: 0.22, filter: 'bandpass', f0: 600, f1: 1800, q: 0.9 });
       break;
     case 'smallCrash':
       noiseBurst(s, { t, dur: 0.11, gain: 0.45, filter: 'bandpass', f0: 1400, f1: 700, q: 0.7 });
