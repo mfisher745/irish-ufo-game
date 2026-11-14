@@ -649,7 +649,7 @@ export interface PatrolRoute {
 }
 
 /** Sources of noise guards react to. DESIGN.md section 7.3, docs/chapters/06 (corn rustle). */
-export type NoiseKind = 'footstep' | 'sneakFootstep' | 'rustle' | 'bottle' | 'combat' | 'other';
+export type NoiseKind = 'footstep' | 'sneakFootstep' | 'rustle' | 'bottle' | 'combat' | 'breakable' | 'other';
 
 /** A noise emitted into the world. DESIGN.md section 7.3. */
 export interface NoiseEvent {
@@ -1136,6 +1136,15 @@ export interface SaveState {
    * with the chapter, e.g. `c1.dympnaTalked`.
    */
   readonly flags: Readonly<Record<string, ChapterFlagValue>>;
+  /**
+   * Dialogue sequences already played in this save (DESIGN.md 7.5 "Nothing
+   * is said twice"). Absent in older saves (treated as empty).
+   */
+  readonly playedDialogue?: readonly DialogueId[];
+  /** Breakable props already broken, by prop key (`PropPlacement.id` or `<screen>#prop<i>`). */
+  readonly brokenProps?: readonly string[];
+  /** Seed for breakable loot, fixed for the life of the save. Absent = 0. */
+  readonly lootSeed?: number;
 }
 
 /** Value of a chapter script flag stored in the save. */
@@ -1162,6 +1171,8 @@ export interface BuzzTuning {
   /** Lowest Buzz value of each state above sober. */
   readonly thresholds: { readonly grand: number; readonly locked: number; readonly banjaxed: number };
   readonly drainPerSecond: number;
+  /** No drain for this long after a drink adds Buzz (DESIGN.md 7.1). */
+  readonly drainDelayAfterDrinkMs: number;
   readonly effects: Readonly<Record<BuzzState, BuzzStateEffects>>;
   readonly banjaxedPeakMs: number;
   readonly banjaxedFallenMs: number;
@@ -1299,7 +1310,10 @@ export interface MykoTuning {
   readonly callsPerGame: number;
   /** Hold time on M (1000). */
   readonly callHoldMs: number;
-  /** How long a called-in fight takes ("about three seconds"). */
+  /**
+   * @deprecated Unused since the call-in became a blackout. Kept only until
+   * tests/unit/myko.test.ts stops reading it (typecheck covers tests); then delete.
+   */
   readonly fightClearMs: number;
   /** Inactivity before an idle comment. */
   readonly idleCommentMs: number;
@@ -1317,6 +1331,32 @@ export interface MykoTuning {
   readonly heatWarnFraction: number;
   /** Chance of a tangent each time the idle timer fires instead of an idle line. */
   readonly tangentChance: number;
+  /** A queued box line not yet shown after this long is dropped (DESIGN.md 7.5 "Nothing is said twice"). */
+  readonly commentStaleMs: number;
+  /** The call-in blackout carries on by itself if the UI has not reported it finished after this long. */
+  readonly blackoutTimeoutMs: number;
+  /** Standing still this long, Myko has a smoke (DESIGN.md 3). */
+  readonly smokeIntervalMs: number;
+  /** Up to this much is added to or taken from each smoke interval (seeded). */
+  readonly smokeJitterMs: number;
+}
+
+/** One entry of a breakable's loot table; `item: null` drops nothing. */
+export interface LootEntry {
+  readonly item: PickupItem | null;
+  readonly weight: number;
+}
+
+/** Breakable props. DESIGN.md 7.1 "Breakables". */
+export interface BreakablesTuning {
+  /** Hits a breakable takes when its placement gives no `hits`. */
+  readonly defaultHits: number;
+  /** Radius of the `breakable` noise for stealth. */
+  readonly noiseRadius: number;
+  /** How long a breakable flashes white when hit. */
+  readonly hitFlashMs: number;
+  /** Weighted loot per region, drawn with a seed from the save and the prop. */
+  readonly loot: Readonly<Record<RegionId, readonly LootEntry[]>>;
 }
 
 /** Investigation tuning. DESIGN.md section 7.4. */
@@ -1348,6 +1388,7 @@ export interface Tuning {
   readonly myko: MykoTuning;
   readonly investigation: InvestigationTuning;
   readonly chapterSelect: ChapterSelectTuning;
+  readonly breakables: BreakablesTuning;
   readonly drinks: Readonly<Record<DrinkId, DrinkDef>>;
   readonly food: Readonly<Record<FoodId, FoodDef>>;
   readonly abilities: Readonly<Record<AbilityId, AbilityDef>>;
@@ -1424,6 +1465,13 @@ export interface GameEventPayloads {
   'ability:glovePulse': { readonly screenId: ScreenId; readonly position: Vec2; readonly radius: number };
   /** Myko finished a call-in and the section is complete. */
   'myko:callFinished': { readonly sectionId: CompletableSectionId; readonly kind: MykoCallKind };
+  /**
+   * A call was accepted: gameplay is paused. The UI covers the screen in black,
+   * shows the caption `sequenceId` (`c<N>.call.<kind>.blackout`) and calls
+   * `uiState.dialogueFinished(sequenceId)` when it is done.
+   */
+  'myko:blackout': { readonly sectionId: CompletableSectionId; readonly kind: MykoCallKind; readonly sequenceId: DialogueId };
+  'prop:broken': { readonly screenId: ScreenId; readonly propId: string; readonly frame: string };
 }
 
 /** Every event name. Use these constants rather than string literals. DESIGN.md section 10. */
@@ -1477,6 +1525,8 @@ export const GameEvents = {
   ScreenEntered: 'screen:entered',
   AbilityGlovePulse: 'ability:glovePulse',
   MykoCallFinished: 'myko:callFinished',
+  MykoBlackout: 'myko:blackout',
+  PropBroken: 'prop:broken',
 } as const satisfies Readonly<Record<string, keyof GameEventPayloads>>;
 
 /** Union of every event name. DESIGN.md section 10. */

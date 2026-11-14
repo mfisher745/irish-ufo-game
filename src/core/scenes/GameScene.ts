@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import type { ChapterRun } from '../../systems/run';
 import type { GameSession } from '../../systems/session';
 import { WorldView } from '../../systems/view/worldView';
+import { debugDrawEnabled } from '../debug';
 import { PhaserInput } from '../phaserInput';
 
 /** Longest step the simulation takes in one go (tab switches, hitches). */
@@ -28,7 +29,7 @@ export class GameScene extends Phaser.Scene {
       return;
     }
     this.input_ = new PhaserInput(this);
-    this.view = new WorldView(this, this.run);
+    this.view = new WorldView(this, this.run, { debug: debugDrawEnabled(window.location.search) });
     this.cameras.main.startFollow(this.view.playerBody, true, 0.2, 0.2);
     this.cameras.main.setRoundPixels(true);
     for (const key of this.hudKeys) {

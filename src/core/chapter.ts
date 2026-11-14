@@ -151,6 +151,20 @@ export interface PropPlacement {
   readonly hidden?: boolean;
   /** 'floor' draws under every character (rugs, puddles, markings); default 'sorted'. */
   readonly layer?: 'sorted' | 'floor';
+  /**
+   * Breaks to melee hits and thrown bottles (DESIGN.md 7.1 "Breakables"). The
+   * hit area is `solid`, or the top-left tile. On breaking it shows
+   * `debrisFrame` (default `PROP.debris[0]`), stops being solid, drops its
+   * loot as a pickup, makes a `breakable` noise and emits `prop:broken`.
+   * Broken props stay broken for the rest of the save.
+   */
+  readonly breakable?: {
+    /** Hits to break (default `TUNING.breakables.defaultHits`). */
+    readonly hits?: number;
+    /** A fixed item, the region's loot table ('table', the default), or 'none'. */
+    readonly loot?: PickupItem | 'table' | 'none';
+    readonly debrisFrame?: string;
+  };
 }
 
 /** A standing NPC. Texture `npcKey(npc)`; feet at the centre of tile (`col`, `row`). */
@@ -351,7 +365,13 @@ export interface ChapterContext {
   readonly sectionHost: SectionHost;
 
   // Dialogue and objectives
-  say(id: DialogueId): Promise<void>;
+  /**
+   * Plays a sequence once per save (DESIGN.md 7.5 "Nothing is said twice"):
+   * if it has been played before it resolves at once and shows nothing, unless
+   * `repeat` is set. A queued `box` line is dropped if Andrew leaves the screen,
+   * the section it was queued in completes, or it waits `myko.commentStaleMs`.
+   */
+  say(id: DialogueId, opts?: { readonly repeat?: boolean }): Promise<void>;
   setObjective(id: ObjectiveId | null): void;
   objective(): ObjectiveId | null;
 
@@ -417,6 +437,14 @@ export interface ChapterContext {
    * Fires once per swing. Returns a function that removes the hook.
    */
   onMeleeHit(area: AreaRect, callback: (hit: MeleeHitInfo) => void, screenId?: ScreenId): () => void;
+
+  // Timers in game time. They keep running while a scene or the call-in
+  // blackout is showing (not while the game is paused) and are cancelled when
+  // the chapter run is torn down (death, Continue, quitting).
+  /** Calls `fn` once after `ms`. Returns a cancel function. */
+  after(ms: number, fn: () => void): () => void;
+  /** Calls `fn` every `ms` until cancelled. Returns a cancel function. */
+  every(ms: number, fn: () => void): () => void;
 }
 
 // ---------------------------------------------------------------------------

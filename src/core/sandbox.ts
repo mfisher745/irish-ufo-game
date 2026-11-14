@@ -11,7 +11,8 @@
  * Dressing and ambience demo (west half): a solid tractor to walk behind and
  * in front of, the animated bog lights, a keg prop that a punch swaps to a
  * crate and whose haymaker toggles the night, Dympna to talk to, and a night
- * tint with one light at the tractor.
+ * tint with one light at the tractor. Breakables: a barrel (col 6, row 8),
+ * a two-hit bottle crate with a stout (col 11, row 8) and a box (col 11, row 3).
  */
 
 import type { ChapterModule, ScreenAmbient } from './chapter';
@@ -130,6 +131,10 @@ export function createSandboxModule(chapter: ChapterNumber = 1): ChapterModule {
             { id: 'sandbox.tractor', frame: 'tractor', col: 4, row: 4, solid: { dy: 1, width: 3, height: 1 }, blocksSight: true },
             { frame: 'bogLights.0', col: 7, row: 9, frames: ['bogLights.0', 'bogLights.1', 'bogLights.2'], frameRate: 3 },
             { id: 'sandbox.keg', frame: 'keg', col: 10, row: 5, solid: { width: 1, height: 1 } },
+            // Breakables: one hit, two hits with a fixed stout, and one from the region's table.
+            { id: 'sandbox.barrel', frame: 'barrel', col: 6, row: 8, solid: { width: 1, height: 1 }, breakable: {} },
+            { id: 'sandbox.bottleCrate', frame: 'bottleCrate', col: 11, row: 8, solid: { width: 1, height: 1 }, breakable: { hits: 2, loot: { kind: 'drink', drinkId: 'stout', count: 1 } } },
+            { id: 'sandbox.box', frame: 'cardboardBox', col: 11, row: 3, solid: { width: 1, height: 1 }, breakable: { loot: 'table', debrisFrame: 'debris.1' } },
           ],
           npcs: [{ id: 'sandbox.dympna', npc: 'dympna', col: 2, row: 9, facing: 'right', examinableId: 'sandbox.dympna', solid: true }],
         },

@@ -8,10 +8,16 @@
  *   has not become a fight, and always on the Administrator (whose ring never
  *   fills; Myko says so by phone, with the "hang on to them" line if calls
  *   are left).
- * - Otherwise the call is spent and the game saves at once. In a fight he
- *   strolls in from the entrance and everything is down within
- *   `fightClearMs`; a puzzle or deduction is solved in one move. Then
- *   `completeNow('myko')`, the chapter's call line set, and the casebook entry.
+ * - Otherwise the call is spent and the game saves at once (the casebook
+ *   entry is written then). Gameplay pauses and `myko:blackout` is emitted
+ *   with the caption `c<N>.call.<kind>.blackout`; the UI covers the screen
+ *   and calls `blackoutFinished(sequenceId)` (via `uiState.dialogueFinished`)
+ *   when its cards are done, or after `blackoutTimeoutMs` the game carries on
+ *   by itself. Then `completeNow('myko')` (enemies down, puzzle solved), Myko
+ *   standing beside Andrew, the chapter's post-call scene, and a save.
+ *
+ * Smoke (DESIGN.md 3): standing still for about `smokeIntervalMs` (seeded
+ * jitter), he has a smoke; `smoking` stays true until he next moves.
  */
 
 import { TUNING } from '../content/tuning';
@@ -21,6 +27,7 @@ import type {
   Completable,
   CompletableSectionId,
   DialogueId,
+  Facing,
   GameEventBus,
   InputFrame,
   MykoCallKind,
@@ -31,18 +38,21 @@ import type {
   Vec2,
 } from '../core/types';
 import type { Random } from '../core/random';
-import { pickAvoiding } from '../core/random';
+import { pickAvoiding, seededRandom } from '../core/random';
+
+/** Seed of the smoke-interval jitter stream (any constant; not a balance number). */
+const SMOKE_SEED = 0x6d796b6f;
 import type { EnemyActor } from './enemies';
-import { distance, normalize, scale, sub, add } from './geometry';
+import { distance, facingFromAngle, normalize, scale, sub, add, angleOf } from './geometry';
 
 /** The section Myko would be called into, as the world sees it. */
 export interface CallTarget {
   readonly completable: Completable;
   /** Fights and bosses: who he has to put down. */
   aliveActors?(): EnemyActor[];
-  /** Stops new waves / phases during the stroll. */
+  /** Stops new waves / phases during the blackout. */
   setSuspended?(on: boolean): void;
-  /** Where he strolls in from. */
+  /** Where he waits on the phone during the section. */
   readonly entrance: Vec2 | null;
 }
 
@@ -66,7 +76,8 @@ export function evaluateCall(input: {
 export interface MykoHost {
   readonly bus: GameEventBus;
   readonly rng: Random;
-  play(id: DialogueId): void;
+  /** Plays a line; `repeat` for pool lines, hints and refusals (DESIGN.md 7.5 "Nothing is said twice"). */
+  play(id: DialogueId, repeat?: boolean): void;
   /** Sequence IDs of a pool, or [] if the pool does not exist. */
   pool(poolId: string): readonly DialogueId[];
   chapter(): ChapterNumber;
@@ -92,9 +103,8 @@ interface CallInProgress {
   readonly target: CallTarget;
   readonly sectionId: CompletableSectionId;
   readonly kind: MykoCallKind;
-  readonly victims: EnemyActor[];
+  readonly sequenceId: DialogueId;
   elapsed: number;
-  downed: number;
 }
 
 export class Myko {
@@ -108,9 +118,22 @@ export class Myko {
   private commentCooldown = 0;
   private idleMs = 0;
   private lastLine: DialogueId | undefined;
+  /** Facing for the view. */
+  facing: Facing = 'down';
+  /** Moved on the last update. */
+  moving = false;
+  /** Having a smoke: from `smokeIntervalMs` of standing still until he next moves. */
+  smoking = false;
+  private stillMs = 0;
+  private nextSmokeMs: number;
+  /** Own seeded stream, so the smoke jitter does not shift the shared RNG (combat, pools). */
+  private readonly smokeRng: Random = seededRandom(SMOKE_SEED);
 
-  constructor(private readonly host: MykoHost) {}
+  constructor(private readonly host: MykoHost) {
+    this.nextSmokeMs = this.smokeInterval();
+  }
 
+  /** The blackout is showing: gameplay is paused. */
   get callInProgress(): boolean {
     return this.call !== null;
   }
@@ -135,6 +158,7 @@ export class Myko {
     }
     if (this.mode !== 'scripted') this.mode = opts.combatOrStealth ? 'onPhone' : 'following';
     this.moveStep(dtMs);
+    this.tickSmoke(dtMs);
 
     // Idle comment.
     if (opts.inputActive) this.idleMs = 0;
@@ -154,7 +178,7 @@ export class Myko {
     if (!line) return false;
     this.lastLine = line;
     this.commentCooldown = TUNING.myko.commentCooldownMs;
-    this.host.play(line);
+    this.host.play(line, true);
     this.host.bus.emit(GameEvents.MykoComment, { trigger, dialogueId: line });
     return true;
   }
@@ -173,7 +197,7 @@ export class Myko {
     const level: 1 | 2 = given >= 1 ? 2 : 1;
     this.host.setHintsGiven(obj.id, Math.min(2, given + 1));
     this.host.bus.emit(GameEvents.MykoHintRequested, { objectiveId: obj.id, level });
-    this.host.play(level === 1 ? obj.hint.nudgeDialogueId : obj.hint.answerDialogueId);
+    this.host.play(level === 1 ? obj.hint.nudgeDialogueId : obj.hint.answerDialogueId, true);
   }
 
   /** Tries the call-in now (used by the hold and by tests). Returns true if Myko came. */
@@ -190,31 +214,35 @@ export class Myko {
     const kind = MYKO_CALL_KIND_BY_SECTION[target.completable.kind];
     this.host.spendCall(sectionId, kind);
     this.host.bus.emit(GameEvents.MykoCallStarted, { sectionId, kind, callsLeft: this.host.callsLeft() });
-    if (kind === 'fight' && target.aliveActors) {
-      const victims = target.aliveActors();
-      target.setSuspended?.(true);
-      for (const v of victims) v.frozen = true;
-      this.host.setPlayerProtected(true);
-      this.mode = 'calledIn';
-      if (target.entrance) this.pos = target.entrance;
-      this.call = { target, sectionId, kind, victims, elapsed: 0, downed: 0 };
-      return true;
-    }
-    this.finishCall(target, sectionId, kind);
+    target.setSuspended?.(true);
+    for (const v of target.aliveActors?.() ?? []) v.frozen = true;
+    this.host.setPlayerProtected(true);
+    this.mode = 'calledIn';
+    this.smoking = false;
+    const sequenceId: DialogueId = `c${this.host.chapter()}.call.${kind}.blackout`;
+    this.call = { target, sectionId, kind, sequenceId, elapsed: 0 };
+    this.host.bus.emit(GameEvents.MykoBlackout, { sectionId, kind, sequenceId });
+    return true;
+  }
+
+  /** The UI has finished the blackout cards. Ignored unless `sequenceId` is the current blackout. */
+  blackoutFinished(sequenceId: DialogueId): boolean {
+    if (!this.call || this.call.sequenceId !== sequenceId) return false;
+    this.endBlackout();
     return true;
   }
 
   private refuse(reason: CallRefusal, administrator: boolean): void {
     this.host.bus.emit(GameEvents.MykoCallRefused, { reason });
     if (administrator) {
-      this.host.play(this.host.callsLeft() > 0 ? 'myko.callRefused.administrator.callsLeft' : 'myko.callRefused.administrator');
+      this.host.play(this.host.callsLeft() > 0 ? 'myko.callRefused.administrator.callsLeft' : 'myko.callRefused.administrator', true);
       return;
     }
     const poolId = reason === 'noCallsLeft' ? 'myko.callRefused.noCallsLeft' : 'myko.callRefused.notCallable';
     const line = pickAvoiding(this.host.rng, this.host.pool(poolId), this.lastLine);
     if (line) {
       this.lastLine = line;
-      this.host.play(line);
+      this.host.play(line, true);
     }
   }
 
@@ -239,39 +267,31 @@ export class Myko {
     }
   }
 
-  private tickCall(dtMs: number): void {
+  /** Counts down the blackout; carries on by itself after `blackoutTimeoutMs` so the game never hangs. */
+  tickCall(dtMs: number): void {
     const c = this.call;
     if (!c) return;
     c.elapsed += dtMs;
-    const total = TUNING.myko.fightClearMs;
-    const n = c.victims.length;
-    // Stroll toward the next one standing.
-    const next = c.victims.find((v) => !v.down);
-    if (next) {
-      const step = (TUNING.myko.strollSpeed * dtMs) / 1000;
-      const d = distance(this.pos, next.pos);
-      if (d > 1) this.pos = add(this.pos, scale(normalize(sub(next.pos, this.pos)), Math.min(step, d)));
-    }
-    // Everyone down by `total`, evenly spaced, without breaking stride.
-    const due = n === 0 ? 0 : Math.min(n, Math.floor((c.elapsed / total) * (n + 1)));
-    while (c.downed < due) {
-      const v = c.victims[c.downed];
-      c.downed++;
-      if (v && !v.down) this.host.defeat(v, 'myko');
-    }
-    if (c.elapsed >= total) {
-      this.call = null;
-      c.target.setSuspended?.(false);
-      this.finishCall(c.target, c.sectionId, c.kind);
-      this.host.setPlayerProtected(false);
-      this.mode = 'following';
-    }
+    if (c.elapsed >= TUNING.myko.blackoutTimeoutMs) this.endBlackout();
+  }
+
+  private endBlackout(): void {
+    const c = this.call;
+    if (!c) return;
+    this.call = null;
+    c.target.setSuspended?.(false);
+    this.finishCall(c.target, c.sectionId, c.kind);
+    this.host.setPlayerProtected(false);
+    this.placeNear(this.host.playerPos());
+    this.mode = 'following';
+    this.stillMs = 0;
   }
 
   private finishCall(target: CallTarget, sectionId: CompletableSectionId, kind: MykoCallKind): void {
-    target.completable.completeNow('myko');
+    // The post-call scene first, straight after the blackout; the section's own end lines queue behind it.
     const lines = this.host.callLines(kind);
     if (lines) this.host.play(lines.sequenceId);
+    target.completable.completeNow('myko');
     this.host.bus.emit(GameEvents.MykoCallFinished, { sectionId, kind });
     this.host.saveAfterCall();
   }
@@ -294,9 +314,32 @@ export class Myko {
     const goal = this.mode === 'following' ? this.followPoint() : (this.standPoint ?? this.followPoint());
     const d = distance(this.pos, goal);
     const slack = this.mode === 'following' ? TUNING.myko.followDistance / 2 : 1;
+    this.moving = false;
     if (d <= slack) return;
     const step = Math.min(d - slack, (TUNING.myko.walkSpeed * dtMs) / 1000);
-    this.pos = add(this.pos, scale(normalize(sub(goal, this.pos)), step));
+    const dir = normalize(sub(goal, this.pos));
+    this.pos = add(this.pos, scale(dir, step));
+    this.moving = step > 0;
+    if (this.moving) this.facing = facingFromAngle(angleOf(dir));
+  }
+
+  private tickSmoke(dtMs: number): void {
+    if (this.moving) {
+      this.stillMs = 0;
+      if (this.smoking) {
+        this.smoking = false;
+        this.nextSmokeMs = this.smokeInterval();
+      }
+      return;
+    }
+    this.stillMs += dtMs;
+    if (!this.smoking && this.stillMs >= this.nextSmokeMs) this.smoking = true;
+  }
+
+  /** `smokeIntervalMs` plus or minus up to `smokeJitterMs`, from the seeded RNG. */
+  private smokeInterval(): number {
+    const t = TUNING.myko;
+    return Math.max(0, t.smokeIntervalMs + (this.smokeRng.next() * 2 - 1) * t.smokeJitterMs);
   }
 
   private followPoint(): Vec2 {
