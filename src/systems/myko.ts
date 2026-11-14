@@ -86,7 +86,7 @@ export interface MykoHost {
   callsLeft(): number;
   callLines(kind: MykoCallKind): MykoCallLineSet | null;
   /** Calls already spent in this chapter in this save (read before `spendCall`). */
-  callsThisChapter?(): number;
+  callsThisChapter(): number;
   /** Spend one call: decrement, record, casebook entry, save at once. */
   spendCall(sectionId: CompletableSectionId, kind: MykoCallKind): void;
   /** Save again after the section is complete. */
@@ -106,8 +106,8 @@ interface CallInProgress {
   readonly sectionId: CompletableSectionId;
   readonly kind: MykoCallKind;
   readonly sequenceId: DialogueId;
-  /** An earlier call this chapter: the shared `myko.call.again` scene plays instead of the chapter's own. */
-  readonly again: boolean;
+  /** Calls already spent this chapter before this one: 1 plays `myko.call.again`, 2 plays `myko.call.allThree`. */
+  readonly earlier: number;
   elapsed: number;
 }
 
@@ -216,7 +216,7 @@ export class Myko {
     if (!target) return false;
     const sectionId = target.completable.sectionId;
     const kind = MYKO_CALL_KIND_BY_SECTION[target.completable.kind];
-    const again = (this.host.callsThisChapter?.() ?? 0) > 0;
+    const earlier = this.host.callsThisChapter();
     this.host.spendCall(sectionId, kind);
     this.host.bus.emit(GameEvents.MykoCallStarted, { sectionId, kind, callsLeft: this.host.callsLeft() });
     target.setSuspended?.(true);
@@ -225,7 +225,7 @@ export class Myko {
     this.mode = 'calledIn';
     this.smoking = false;
     const sequenceId: DialogueId = `c${this.host.chapter()}.call.${kind}.blackout`;
-    this.call = { target, sectionId, kind, sequenceId, again, elapsed: 0 };
+    this.call = { target, sectionId, kind, sequenceId, earlier, elapsed: 0 };
     this.host.bus.emit(GameEvents.MykoBlackout, { sectionId, kind, sequenceId });
     return true;
   }
@@ -285,17 +285,18 @@ export class Myko {
     if (!c) return;
     this.call = null;
     c.target.setSuspended?.(false);
-    this.finishCall(c.target, c.sectionId, c.kind, c.again);
+    this.finishCall(c.target, c.sectionId, c.kind, c.earlier);
     this.host.setPlayerProtected(false);
     this.placeNear(this.host.playerPos());
     this.mode = 'following';
     this.stillMs = 0;
   }
 
-  private finishCall(target: CallTarget, sectionId: CompletableSectionId, kind: MykoCallKind, again: boolean): void {
+  private finishCall(target: CallTarget, sectionId: CompletableSectionId, kind: MykoCallKind, earlier: number): void {
     // The post-call scene first, straight after the blackout; the section's own end lines queue behind it.
-    // A second or third call in the one chapter plays the shared scene instead, and it may repeat.
-    if (again) this.host.play('myko.call.again', true);
+    // Second call in the chapter: `myko.call.again`; third: `myko.call.allThree`. Each can occur once per save,
+    // so they play without `repeat` and the "nothing is said twice" record guards them.
+    if (earlier >= 1) this.host.play(earlier >= 2 ? 'myko.call.allThree' : 'myko.call.again');
     else {
       const lines = this.host.callLines(kind);
       if (lines) this.host.play(lines.sequenceId);
