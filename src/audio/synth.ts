@@ -31,13 +31,17 @@ export type EffectId =
   | 'deflect'
   | 'heatWarning'
   | 'enemyDown'
-  | 'abilityUnlocked';
+  | 'abilityUnlocked'
+  | 'thud'
+  | 'smallCrash'
+  | 'breakWood'
+  | 'breakGlass';
 
 export const EFFECT_IDS: readonly EffectId[] = [
   'hit', 'haymaker', 'hurley', 'bottleThrow', 'bottleSmash', 'drink', 'footstep', 'hurt', 'fallOver', 'pickup',
   'refuse', 'alarm', 'detectionTick', 'door', 'push', 'uiMove', 'uiSelect', 'save', 'blipAndrew', 'blipMyko',
   'blipOther', 'blipAlien', 'mykoCallIn', 'bossPhase', 'stun', 'fire', 'sliotar', 'deflect', 'heatWarning',
-  'enemyDown', 'abilityUnlocked',
+  'enemyDown', 'abilityUnlocked', 'thud', 'smallCrash', 'breakWood', 'breakGlass',
 ];
 
 export interface Synth {
@@ -110,6 +114,28 @@ export function noiseBurst(s: Synth, o: NoiseOpts): void {
   src.connect(f).connect(g).connect(s.dest);
   src.start(o.t);
   src.stop(o.t + o.dur + 0.02);
+}
+
+/**
+ * Level of the dialogue text click (noise gain before the effects volume).
+ * Raise it to hear the clicks more. They sit well under every other effect.
+ */
+export const TEXT_CLICK_LEVEL = 0.045;
+
+// Small repeatable variation so a line of text does not sound like a machine gun.
+let clickSeed = 20231;
+const clickRandom = (): number => {
+  clickSeed = (clickSeed * 1664525 + 1013904223) >>> 0;
+  return clickSeed / 4294967296;
+};
+
+/** One telegraph-key click: a few milliseconds of band-passed noise over a tiny body, no pitch to speak of. */
+function textClick(s: Synth, t: number, centre: number): void {
+  const level = TEXT_CLICK_LEVEL * (0.7 + clickRandom() * 0.6);
+  const f = centre * (0.88 + clickRandom() * 0.24);
+  noiseBurst(s, { t, dur: 0.012, gain: level, filter: 'bandpass', f0: f, q: 1.1 + clickRandom() * 0.5 });
+  // The body: a very short, quiet knock a few hundred Hz down.
+  tone(s, { type: 'sine', f0: f * 0.12, f1: f * 0.07, t, dur: 0.01, gain: level * 0.5, attack: 0.001 });
 }
 
 /** Play one effect starting at time `t` on the synth's destination. */
@@ -186,16 +212,18 @@ export function renderEffect(id: EffectId, s: Synth, t: number): void {
       tone(s, { type: 'triangle', f0: 784, t: t + 0.2, dur: 0.18, gain: 0.25 });
       break;
     case 'blipAndrew':
-      tone(s, { type: 'square', f0: 880, t, dur: 0.035, gain: 0.1 });
+      textClick(s, t, 2300);
       break;
     case 'blipMyko':
-      tone(s, { type: 'square', f0: 440, t, dur: 0.04, gain: 0.12 });
+      // A little lower.
+      textClick(s, t, 1550);
       break;
     case 'blipOther':
-      tone(s, { type: 'square', f0: 660, t, dur: 0.035, gain: 0.1 });
+      textClick(s, t, 1900);
       break;
     case 'blipAlien':
-      tone(s, { type: 'square', f0: 1320, t, dur: 0.035, gain: 0.1, detune: 18 });
+      // A little brighter.
+      textClick(s, t, 3300);
       break;
     case 'mykoCallIn':
       // A low drop, no fanfare.
@@ -231,6 +259,30 @@ export function renderEffect(id: EffectId, s: Synth, t: number): void {
       break;
     case 'abilityUnlocked':
       [523, 659, 784, 1047].forEach((f, i) => tone(s, { type: 'square', f0: f, t: t + i * 0.08, dur: 0.12, gain: 0.18 }));
+      break;
+    // Off-screen sounds for the blackout and breakable objects: short, dry, a little comic.
+    case 'thud':
+      tone(s, { type: 'sine', f0: 95, f1: 42, t, dur: 0.22, gain: 0.8 });
+      noiseBurst(s, { t, dur: 0.07, gain: 0.3, f0: 500, f1: 120 });
+      break;
+    case 'smallCrash':
+      noiseBurst(s, { t, dur: 0.11, gain: 0.45, filter: 'bandpass', f0: 1400, f1: 700, q: 0.7 });
+      for (let i = 0; i < 4; i++) {
+        noiseBurst(s, { t: t + 0.05 + i * 0.045, dur: 0.05, gain: 0.3 - i * 0.05, filter: 'bandpass', f0: 2500 - i * 350, q: 2 });
+        tone(s, { type: 'triangle', f0: 1700 - i * 230, f1: 900, t: t + 0.05 + i * 0.045, dur: 0.06, gain: 0.07 });
+      }
+      tone(s, { type: 'sine', f0: 120, f1: 50, t, dur: 0.16, gain: 0.35 });
+      break;
+    case 'breakWood':
+      noiseBurst(s, { t, dur: 0.06, gain: 0.55, filter: 'bandpass', f0: 1100, f1: 500, q: 1.4 });
+      tone(s, { type: 'triangle', f0: 240, f1: 110, t, dur: 0.1, gain: 0.45 });
+      noiseBurst(s, { t: t + 0.07, dur: 0.05, gain: 0.35, filter: 'bandpass', f0: 800, f1: 400, q: 1.6 });
+      noiseBurst(s, { t: t + 0.13, dur: 0.07, gain: 0.25, filter: 'bandpass', f0: 650, f1: 300, q: 1.2 });
+      break;
+    case 'breakGlass':
+      noiseBurst(s, { t, dur: 0.09, gain: 0.4, filter: 'highpass', f0: 3500, f1: 7000 });
+      for (let i = 0; i < 7; i++) tone(s, { type: 'sine', f0: 2600 + ((i * 937) % 2200), t: t + 0.02 + i * 0.03, dur: 0.07, gain: 0.1 });
+      noiseBurst(s, { t: t + 0.12, dur: 0.25, gain: 0.18, filter: 'highpass', f0: 5000 });
       break;
   }
 }

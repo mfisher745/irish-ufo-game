@@ -1,8 +1,14 @@
-/** Music: compiles theme data to timed events and schedules them with Web Audio. */
+/**
+ * Music: compiles theme sections to timed events and schedules them with Web
+ * Audio. The player strings sections together in a shuffled order, never the
+ * same one twice running and (when it can) never the same one within
+ * `MIN_GAP_SEC` of playing time, and crossfades to an intense version while a
+ * boss or set piece is on.
+ */
 
 import type { RegionId } from '../core/types';
-import { THEMES, PHRASE_STEPS } from './themes';
-import type { Theme, Voice } from './themes';
+import { BOSS_TEMPO, MAX_BOSS_LEVEL, PHRASE_STEPS, THEMES, THEME_KEYS, bossify } from './themes';
+import type { SectionDef, SectionKind, Voice } from './themes';
 import { noiseBurst, tone } from './synth';
 import type { Synth } from './synth';
 
@@ -23,7 +29,6 @@ export function noteFreq(name: string): number | null {
 export interface NoteEvent {
   readonly kind: 'note';
   readonly voice: Voice;
-  readonly bus: 'bass' | 'rest';
   readonly freq: number;
   readonly prevFreq: number;
   readonly steps: number;
@@ -38,14 +43,16 @@ export interface PercEvent {
 
 export type MusicEvent = NoteEvent | PercEvent;
 
-export interface CompiledTheme {
+export interface CompiledSection {
+  readonly id: string;
+  readonly kind: SectionKind;
   readonly stepSec: number;
   readonly totalSteps: number;
   readonly byStep: ReadonlyArray<readonly MusicEvent[]>;
-  readonly wind: boolean;
+  readonly durationSec: number;
 }
 
-/** Parses one phrase string; returns events and the total step count (should be 32). */
+/** Parses one phrase string; returns notes and the total step count (should be 32). */
 export function parsePhrase(src: string): { notes: Array<{ at: number; steps: number; freq: number }>; length: number } {
   const notes: Array<{ at: number; steps: number; freq: number }> = [];
   let at = 0;
@@ -59,35 +66,46 @@ export function parsePhrase(src: string): { notes: Array<{ at: number; steps: nu
   return { notes, length: at };
 }
 
-export function compileTheme(theme: Theme): CompiledTheme {
-  const totalSteps = theme.form.length * PHRASE_STEPS;
+export function compileSection(section: SectionDef): CompiledSection {
+  const phraseCount = Math.max(...section.tracks.map((t) => t.phrases.length));
+  const totalSteps = phraseCount * PHRASE_STEPS;
   const byStep: MusicEvent[][] = Array.from({ length: totalSteps }, () => []);
-  for (const track of theme.tracks) {
+  for (const track of section.tracks) {
     let prev = 0;
-    theme.form.forEach((letter, p) => {
-      const src = track.phrases[letter];
-      if (src === undefined) return;
+    track.phrases.forEach((src, p) => {
       const { notes, length } = parsePhrase(src);
-      if (length !== PHRASE_STEPS) throw new Error(`Phrase ${letter} of ${track.voice} has ${length} steps, expected ${PHRASE_STEPS}`);
+      if (length !== PHRASE_STEPS) throw new Error(`Section ${section.id}: a ${track.voice} phrase has ${length} steps, expected ${PHRASE_STEPS}`);
       for (const n of notes) {
-        byStep[p * PHRASE_STEPS + n.at]?.push({ kind: 'note', voice: track.voice, bus: track.bus, freq: n.freq, prevFreq: prev === 0 ? n.freq : prev, steps: n.steps, gain: track.gain });
+        byStep[p * PHRASE_STEPS + n.at]?.push({ kind: 'note', voice: track.voice, freq: n.freq, prevFreq: prev === 0 ? n.freq : prev, steps: n.steps, gain: track.gain });
         prev = n.freq;
       }
     });
   }
-  if (theme.perc !== undefined) {
+  if (section.perc !== undefined) {
     for (let s = 0; s < totalSteps; s++) {
-      const c = theme.perc[s % theme.perc.length];
-      if (c !== undefined && c !== '.') byStep[s]?.push({ kind: 'perc', hit: c, gain: theme.percGain ?? 0.4 });
+      const c = section.perc[s % section.perc.length];
+      if (c !== undefined && c !== '.') byStep[s]?.push({ kind: 'perc', hit: c, gain: section.percGain ?? 0.4 });
     }
   }
-  return { stepSec: 60 / theme.bpm / 2, totalSteps, byStep, wind: theme.wind === true };
+  const stepSec = 60 / section.bpm / 2;
+  return { id: section.id, kind: section.kind, stepSec, totalSteps, byStep, durationSec: totalSteps * stepSec };
 }
 
-export interface Buses {
-  readonly bass: AudioNode;
-  readonly rest: AudioNode;
+/** The sections a region plays at a boss level (0 = the normal theme), compiled. */
+export function sectionsFor(region: RegionId, level: number): CompiledSection[] {
+  const theme = THEMES[region];
+  const key = THEME_KEYS[region];
+  const lv = Math.max(0, Math.min(MAX_BOSS_LEVEL, level));
+  if (lv === 0) return theme.sections.map(compileSection);
+  return theme.sections.filter((s) => s.kind !== 'sparse').map((s) => compileSection(bossify(s, lv, key.root, key.mode)));
 }
+
+/** Tempo multiplier at a boss level, for reports. */
+export const bossTempo = (level: number): number => BOSS_TEMPO[Math.max(0, Math.min(MAX_BOSS_LEVEL, level))] ?? 1;
+
+// ---------------------------------------------------------------------------
+// Voices
+// ---------------------------------------------------------------------------
 
 function playVoice(s: Synth, e: NoteEvent, t: number, stepSec: number): void {
   const dur = e.steps * stepSec;
@@ -101,11 +119,12 @@ function playVoice(s: Synth, e: NoteEvent, t: number, stepSec: number): void {
     g.connect(s.dest);
     return g;
   };
-  const vibrato = (osc: OscillatorNode, hz: number, cents: number): void => {
+  const vibrato = (osc: OscillatorNode, hz: number, cents: number, delay = 0): void => {
     const lfo = ctx.createOscillator();
     const depth = ctx.createGain();
     lfo.frequency.value = hz;
-    depth.gain.value = cents;
+    depth.gain.setValueAtTime(0, t);
+    depth.gain.linearRampToValueAtTime(cents, t + delay + 0.15);
     lfo.connect(depth).connect(osc.detune);
     lfo.start(t);
     lfo.stop(t + dur + 0.05);
@@ -129,7 +148,18 @@ function playVoice(s: Synth, e: NoteEvent, t: number, stepSec: number): void {
   switch (e.voice) {
     case 'whistle': {
       const o = osc('triangle', e.freq, env(e.gain, 0.06, 0.12));
-      vibrato(o, 5.5, 14);
+      vibrato(o, 5.5, 14, dur > 0.5 ? 0.2 : 0);
+      break;
+    }
+    case 'recorder': {
+      // Softer and breathier than the whistle: a sine with a little octave, a slow shallow vibrato.
+      const out = env(e.gain, 0.09, 0.14);
+      const o = osc('sine', e.freq, out);
+      const g2 = ctx.createGain();
+      g2.gain.value = 0.25;
+      osc('triangle', e.freq * 2, g2).detune.value = 6;
+      g2.connect(out);
+      vibrato(o, 4.4, 8, 0.3);
       break;
     }
     case 'soft':
@@ -142,6 +172,31 @@ function playVoice(s: Synth, e: NoteEvent, t: number, stepSec: number): void {
       g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.2, dur));
       g.connect(f);
       osc('square', e.freq, g);
+      break;
+    }
+    case 'guitar': {
+      // A short decaying pluck: a bright attack that closes down fast, a body that rings a little.
+      const ring = 0.85;
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.setValueAtTime(3200, t);
+      f.frequency.exponentialRampToValueAtTime(700, t + 0.25);
+      f.connect(s.dest);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.linearRampToValueAtTime(e.gain, t + 0.004);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + ring);
+      g.connect(f);
+      for (const [type, mult, level] of [['triangle', 1, 1], ['square', 1, 0.35], ['sine', 2, 0.3]] as const) {
+        const o = ctx.createOscillator();
+        o.type = type;
+        o.frequency.value = e.freq * mult;
+        const lg = ctx.createGain();
+        lg.gain.value = level;
+        o.connect(lg).connect(g);
+        o.start(t);
+        o.stop(t + ring + 0.05);
+      }
       break;
     }
     case 'theremin': {
@@ -214,108 +269,183 @@ function playPerc(s: Synth, e: PercEvent, t: number): void {
   }
 }
 
-/** Schedule every event of one step at time `t`. Shared by the live player and offline tests. */
-export function scheduleStep(ctx: BaseAudioContext, buses: Buses, noise: AudioBuffer, theme: CompiledTheme, step: number, t: number): void {
-  const events = theme.byStep[step % theme.totalSteps];
+/** Schedule every event of one step at time `t`. Shared by the live player and offline renders. */
+export function scheduleStep(ctx: BaseAudioContext, dest: AudioNode, noise: AudioBuffer, section: CompiledSection, step: number, t: number): void {
+  const events = section.byStep[step % section.totalSteps];
   if (events === undefined) return;
+  const synth: Synth = { ctx, dest, noise };
   for (const e of events) {
-    if (e.kind === 'note') playVoice({ ctx, dest: buses[e.bus], noise }, e, t, theme.stepSec);
-    else playPerc({ ctx, dest: buses.rest, noise }, e, t);
+    if (e.kind === 'note') playVoice(synth, e, t, section.stepSec);
+    else playPerc(synth, e, t);
   }
 }
 
+/** Schedules a whole section from time `t0` (offline rendering). */
+export function scheduleSection(ctx: BaseAudioContext, dest: AudioNode, noise: AudioBuffer, section: CompiledSection, t0: number): void {
+  for (let step = 0; step < section.totalSteps; step++) scheduleStep(ctx, dest, noise, section, step, t0 + step * section.stepSec);
+}
+
+// ---------------------------------------------------------------------------
+// Choosing sections
+// ---------------------------------------------------------------------------
+
+/** No section repeats within this much playing time if the theme has enough sections to avoid it. */
+export const MIN_GAP_SEC = 90;
+/** How often the lively section comes up relative to the others. */
+const LIVELY_WEIGHT = 0.5;
+
+export class SectionPicker {
+  private played = 0;
+  private last: string | null = null;
+  private readonly endedAt = new Map<string, number>();
+
+  constructor(
+    private readonly sections: readonly CompiledSection[],
+    private readonly rng: () => number = Math.random,
+    private readonly minGapSec = MIN_GAP_SEC,
+  ) {}
+
+  /** The next section to play. The first one is the main section when `startWithMain` is set. */
+  next(startWithMain: boolean): CompiledSection {
+    let pick: CompiledSection | undefined;
+    if (this.last === null && startWithMain) pick = this.sections.find((s) => s.kind === 'main');
+    if (pick === undefined) {
+      const notLast = this.sections.filter((s) => s.id !== this.last);
+      const rested = notLast.filter((s) => {
+        const end = this.endedAt.get(s.id);
+        return end === undefined || this.played - end >= this.minGapSec;
+      });
+      const pool = rested.length > 0 ? rested : [...notLast].sort((a, b) => (this.endedAt.get(a.id) ?? -1) - (this.endedAt.get(b.id) ?? -1)).slice(0, 1);
+      const weights = pool.map((s) => (s.kind === 'lively' ? LIVELY_WEIGHT : 1));
+      let r = this.rng() * weights.reduce((a, b) => a + b, 0);
+      pick = pool[pool.length - 1];
+      for (let i = 0; i < pool.length; i++) {
+        r -= weights[i] ?? 0;
+        if (r <= 0) {
+          pick = pool[i];
+          break;
+        }
+      }
+    }
+    const chosen = pick ?? this.sections[0];
+    if (chosen === undefined) throw new Error('A theme needs at least one section');
+    this.played += chosen.durationSec;
+    this.endedAt.set(chosen.id, this.played);
+    this.last = chosen.id;
+    return chosen;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// The player
+// ---------------------------------------------------------------------------
+
 interface Run {
-  readonly region: RegionId;
-  readonly theme: CompiledTheme;
-  readonly bass: GainNode;
-  readonly rest: GainNode;
+  readonly gain: GainNode;
   readonly extra: AudioScheduledSourceNode[];
+  readonly picker: SectionPicker;
+  readonly region: RegionId;
+  readonly level: number;
+  section: CompiledSection;
   step: number;
   nextTime: number;
 }
 
 const LOOKAHEAD = 0.3;
-const FADE = 0.8;
+/** Seconds to crossfade between runs (regions, boss levels, returning from the call-in). */
+const FADE = 1.0;
+const CUT_FADE = 0.25;
 
 export class MusicPlayer {
   private run: Run | null = null;
-  private readonly duck: GainNode;
-  private readonly compiled = new Map<RegionId, CompiledTheme>();
+  private readonly cache = new Map<string, CompiledSection[]>();
   private timer: ReturnType<typeof setInterval> | null = null;
   private region: RegionId | null = null;
+  private level = 0;
+  private silent = false;
 
   constructor(
     private readonly ctx: BaseAudioContext,
-    out: AudioNode,
+    private readonly out: AudioNode,
     private readonly noise: AudioBuffer,
+    private readonly rng: () => number = Math.random,
   ) {
-    this.duck = ctx.createGain();
-    this.duck.connect(out);
     this.timer = setInterval(() => this.tick(), 60);
   }
 
   setRegion(region: RegionId): void {
     if (this.region === region) return;
     this.region = region;
-    this.fadeOut();
-    if (this.ctx.state === 'running') this.startRun(region);
+    this.restart(FADE);
+  }
+
+  /** 0 is the normal theme; 1 to 3 are the boss versions, each more intense. */
+  setIntensity(level: number): void {
+    const lv = Math.max(0, Math.min(MAX_BOSS_LEVEL, Math.round(level)));
+    if (lv === this.level) return;
+    this.level = lv;
+    this.restart(FADE);
+  }
+
+  /** The Myko call-in: nothing plays at all until it is switched off again. */
+  setSilent(on: boolean): void {
+    if (this.silent === on) return;
+    this.silent = on;
+    this.restart(on ? CUT_FADE : FADE);
   }
 
   /** Called when the context starts running (after the first user gesture). */
   resumed(): void {
-    if (this.run === null && this.region !== null) this.startRun(this.region);
+    if (this.run === null) this.restart(FADE);
   }
 
   stop(): void {
     this.region = null;
-    this.fadeOut();
+    this.fadeOut(FADE);
   }
 
-  /** Bass line only while true. */
-  setBassOnly(on: boolean): void {
-    this.restGainTarget(on ? 0 : 1);
+  get currentLevel(): number {
+    return this.level;
   }
 
-  private restGainTarget(v: number): void {
-    this.bassOnlyValue = v;
+  /** What is playing, for tests and the dev harness. */
+  nowPlaying(): { region: RegionId; level: number; section: string } | null {
     const r = this.run;
-    if (r === null) return;
-    const t = this.ctx.currentTime;
-    r.rest.gain.cancelScheduledValues(t);
-    r.rest.gain.setValueAtTime(r.rest.gain.value, t);
-    r.rest.gain.linearRampToValueAtTime(v, t + 0.4);
+    return r === null ? null : { region: r.region, level: r.level, section: r.section.id };
   }
-
-  private bassOnlyValue = 1;
 
   dispose(): void {
     if (this.timer !== null) clearInterval(this.timer);
     this.timer = null;
-    this.fadeOut();
+    this.fadeOut(FADE);
   }
 
-  private theme(region: RegionId): CompiledTheme {
-    let c = this.compiled.get(region);
+  private sections(region: RegionId, level: number): CompiledSection[] {
+    const key = `${region}.${level}`;
+    let c = this.cache.get(key);
     if (c === undefined) {
-      c = compileTheme(THEMES[region]);
-      this.compiled.set(region, c);
+      c = sectionsFor(region, level);
+      this.cache.set(key, c);
     }
     return c;
   }
 
-  private startRun(region: RegionId): void {
-    const theme = this.theme(region);
-    const bass = this.ctx.createGain();
-    const rest = this.ctx.createGain();
+  /** Fade out whatever plays and, unless silent, fade in a fresh run for the current region and level. */
+  private restart(fade: number): void {
+    this.fadeOut(fade);
+    if (this.silent || this.region === null || this.ctx.state !== 'running') return;
+    this.startRun(this.region, this.level, fade);
+  }
+
+  private startRun(region: RegionId, level: number, fade: number): void {
+    const picker = new SectionPicker(this.sections(region, level), this.rng, level === 0 ? MIN_GAP_SEC : MIN_GAP_SEC / 2);
+    const gain = this.ctx.createGain();
     const t0 = this.ctx.currentTime;
-    for (const g of [bass, rest]) {
-      g.gain.setValueAtTime(0.0001, t0);
-      g.connect(this.duck);
-    }
-    bass.gain.linearRampToValueAtTime(1, t0 + FADE);
-    rest.gain.linearRampToValueAtTime(this.bassOnlyValue, t0 + FADE);
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.linearRampToValueAtTime(1, t0 + fade);
+    gain.connect(this.out);
     const extra: AudioScheduledSourceNode[] = [];
-    if (theme.wind) {
+    if (THEMES[region].wind === true) {
       const src = this.ctx.createBufferSource();
       src.buffer = this.noise;
       src.loop = true;
@@ -330,24 +460,22 @@ export class MusicPlayer {
       lfo.connect(depth).connect(f.frequency);
       const g = this.ctx.createGain();
       g.gain.value = 0.22;
-      src.connect(f).connect(g).connect(rest);
+      src.connect(f).connect(g).connect(gain);
       src.start();
       lfo.start();
       extra.push(src, lfo);
     }
-    this.run = { region, theme, bass, rest, extra, step: 0, nextTime: t0 + 0.05 };
+    this.run = { gain, extra, picker, region, level, section: picker.next(level === 0), step: 0, nextTime: t0 + 0.05 };
   }
 
-  private fadeOut(): void {
+  private fadeOut(fade: number): void {
     const r = this.run;
     this.run = null;
     if (r === null) return;
     const t = this.ctx.currentTime;
-    for (const g of [r.bass, r.rest]) {
-      g.gain.cancelScheduledValues(t);
-      g.gain.setValueAtTime(g.gain.value, t);
-      g.gain.linearRampToValueAtTime(0.0001, t + FADE);
-    }
+    r.gain.gain.cancelScheduledValues(t);
+    r.gain.gain.setValueAtTime(r.gain.gain.value, t);
+    r.gain.gain.linearRampToValueAtTime(0.0001, t + fade);
     setTimeout(() => {
       for (const n of r.extra) {
         try {
@@ -356,9 +484,8 @@ export class MusicPlayer {
           // already stopped
         }
       }
-      r.bass.disconnect();
-      r.rest.disconnect();
-    }, (FADE + 1.5) * 1000);
+      r.gain.disconnect();
+    }, (fade + 1.5) * 1000);
   }
 
   private tick(): void {
@@ -367,9 +494,13 @@ export class MusicPlayer {
     // If the tab was suspended and time jumped, skip ahead rather than burst-play.
     if (r.nextTime < this.ctx.currentTime - 0.5) r.nextTime = this.ctx.currentTime + 0.05;
     while (r.nextTime < this.ctx.currentTime + LOOKAHEAD) {
-      scheduleStep(this.ctx, { bass: r.bass, rest: r.rest }, this.noise, r.theme, r.step, r.nextTime);
-      r.step = (r.step + 1) % r.theme.totalSteps;
-      r.nextTime += r.theme.stepSec;
+      scheduleStep(this.ctx, r.gain, this.noise, r.section, r.step, r.nextTime);
+      r.nextTime += r.section.stepSec;
+      r.step++;
+      if (r.step >= r.section.totalSteps) {
+        r.step = 0;
+        r.section = r.picker.next(false);
+      }
     }
   }
 }

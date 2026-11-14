@@ -8,6 +8,7 @@ import { TUNING } from '../content/tuning';
 import { GameEvents } from '../core/types';
 import type { AbilityId, AlarmFightId, AudioSettings, GameEventBus, RegionId } from '../core/types';
 import { MusicPlayer } from './music';
+import { MAX_BOSS_LEVEL } from './themes';
 import { EFFECT_IDS, makeNoiseBuffer, renderEffect } from './synth';
 import type { EffectId, Synth } from './synth';
 
@@ -28,6 +29,10 @@ export interface Audio {
 const MUSIC_LEVEL = 0.45;
 const EFFECTS_LEVEL = 0.8;
 const ALARM_CYCLE_MS = 600;
+
+/** Text clicks never come faster than this, whatever the typewriter speed. */
+const MAX_CLICKS_PER_SECOND = 30;
+const BLIPS: ReadonlySet<EffectId> = new Set<EffectId>(['blipAndrew', 'blipMyko', 'blipOther', 'blipAlien']);
 
 const ABILITY_SOUND: Partial<Record<AbilityId, EffectId>> = {
   bottleThrow: 'bottleThrow',
@@ -79,8 +84,13 @@ export function createAudio(bus: GameEventBus, getSettings: () => AudioSettings,
 
   const running = (): boolean => ctx.state === 'running';
 
+  let lastClick = -1;
   const play = (id: EffectId): void => {
     if (!running()) return;
+    if (BLIPS.has(id)) {
+      if (ctx.currentTime - lastClick < 1 / MAX_CLICKS_PER_SECOND) return;
+      lastClick = ctx.currentTime;
+    }
     applySettings();
     renderEffect(id, sfx, ctx.currentTime + 0.005);
   };
@@ -100,11 +110,22 @@ export function createAudio(bus: GameEventBus, getSettings: () => AudioSettings,
     alarmTimer = setInterval(() => play('alarm'), ALARM_CYCLE_MS);
   };
 
-  // Myko call-in: bass line only until the called section completes.
+  // Myko call-in: the music cuts out completely until the called section completes.
   let callSection: string | null = null;
   const endCall = (): void => {
     callSection = null;
-    music.setBassOnly(false);
+    music.setSilent(false);
+  };
+
+  // Boss music: intense while a boss or set piece is on, one step more at each phase change.
+  let bossSection: string | null = null;
+  let bossLevel = 0;
+  let bossPhases = 0;
+  const endBoss = (): void => {
+    bossSection = null;
+    bossLevel = 0;
+    bossPhases = 0;
+    music.setIntensity(0);
   };
 
   const haymakerKnockback = TUNING.abilities.punchCombo.combo?.at(-1)?.knockback ?? Infinity;
@@ -131,9 +152,21 @@ export function createAudio(bus: GameEventBus, getSettings: () => AudioSettings,
     bus.on(G.PlayerDied, () => {
       stopAlarm();
       endCall();
+      endBoss();
       play('fallOver');
     }),
-    bus.on(G.PlayerRespawned, () => stopAlarm()),
+    bus.on(G.PlayerRespawned, () => {
+      stopAlarm();
+      endCall();
+      endBoss();
+    }),
+    bus.on(G.SectionStarted, ({ sectionId, kind }) => {
+      if (kind !== 'boss' && kind !== 'setpiece') return;
+      bossSection = sectionId;
+      bossLevel = 1;
+      bossPhases = 0;
+      music.setIntensity(bossLevel);
+    }),
     bus.on(G.BuzzBanjaxedPhase, ({ phase }) => {
       if (phase === 'fallen') play('fallOver');
     }),
@@ -165,7 +198,16 @@ export function createAudio(bus: GameEventBus, getSettings: () => AudioSettings,
       if (to === 'detecting') play('detectionTick');
     }),
     bus.on(G.StealthAlarm, ({ fightId }) => startAlarm(fightId)),
-    bus.on(G.BossPhaseChanged, () => play('bossPhase')),
+    bus.on(G.BossPhaseChanged, () => {
+      play('bossPhase');
+      // The first phase is announced when the boss starts; later ones step the music up.
+      if (bossSection === null) return;
+      bossPhases++;
+      if (bossPhases > 1) {
+        bossLevel = Math.min(MAX_BOSS_LEVEL, bossLevel + 1);
+        music.setIntensity(bossLevel);
+      }
+    }),
     bus.on(G.HeatChanged, ({ active, value }) => {
       if (active && lastHeat < heatWarnAt && value >= heatWarnAt) play('heatWarning');
       lastHeat = active ? value : 0;
@@ -173,20 +215,23 @@ export function createAudio(bus: GameEventBus, getSettings: () => AudioSettings,
     bus.on(G.SaveWritten, () => play('save')),
     bus.on(G.MykoCallStarted, ({ sectionId }) => {
       callSection = sectionId;
-      music.setBassOnly(true);
+      music.setSilent(true);
       play('mykoCallIn');
     }),
     bus.on(G.SectionCompleted, ({ sectionId }) => {
       if (alarmFight !== null && sectionId === alarmFight) stopAlarm();
+      if (bossSection !== null && sectionId === bossSection) endBoss();
       if (callSection !== null && sectionId === callSection) endCall();
     }),
     bus.on(G.ChapterStarted, () => {
       stopAlarm();
       endCall();
+      endBoss();
     }),
     bus.on(G.ChapterCompleted, () => {
       stopAlarm();
       endCall();
+      endBoss();
     }),
   ];
 
