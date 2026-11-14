@@ -5,7 +5,7 @@
  */
 
 import type { DialogueFile } from './index';
-import { box, linePool, mykoPool } from './build';
+import { box, linePool, mykoPool, scene } from './build';
 
 const death = mykoPool('myko.death', [
   "You're grand. You fell over with great conviction.",
@@ -258,6 +258,17 @@ export const COMMON: DialogueFile = {
       ['myko', "I'll hang on to the others for you. You won't need them."],
     ),
     box('myko.cleanRun', ['myko', 'Nobody saw you. I barely saw you, and I was looking.']),
+    // A second or third call in the one chapter: the same scene in every chapter, and it may repeat.
+    scene(
+      'myko.call.again',
+      ['myko', 'Again.'],
+      ['andrew', 'It was a different thing.'],
+      ['myko', "It was the same thing, Andrew. It was a thing you couldn't do. Same place, same day, same face on you."],
+      ['myko', "You get three of me. For the whole lot. There's a world out there you want to show something to, and you can't get out of the one postcode without ringing me."],
+      ['andrew', 'I had it mostly done.'],
+      ['myko', "You'd it mostly started. Will I just stay standing beside you? Save you holding the button."],
+      ['myko', "Three-time winner of the Feeney's table quiz. I'd love to have seen the other tables."],
+    ),
     box('myko.caught', ['myko', "They've seen you. Go on, so. Plan B was always the plan."]),
   ],
   pools: {
