@@ -11,8 +11,8 @@
  * ones in common.ts.
  *
  * Rules for these cards: no exclamation marks, no description of the method,
- * times and small domestic details only. Understate. The second call is the
- * Batman one.
+ * times and small domestic details only. Understate. The second fight call
+ * is the Batman one.
  */
 
 import type { DialogueSequence } from '../../core/types';
@@ -40,7 +40,7 @@ export const CALLINS: DialogueFile = {
       'Myko did most of a welding course in Carrick.',
       'It takes Myko three seconds. Batman would still be up on the roof, waiting for the right moment.',
     ),
-    blackout('myko.call.puzzle.blackout.2', 'Batman has a cave full of computers for this kind of thing.', 'Myko has a lighter and a bus timetable from 2019.', 'Myko is finished first.'),
+    blackout('myko.call.puzzle.blackout.2', 'Myko reads the instructions.', 'There are no instructions. He reads them anyway.', 'It is done before he gets to the end.'),
 
     // Third and last call.
     blackout('myko.call.fight.blackout.3', 'Two seconds.', 'He is getting quicker. Nobody knows what he practises on.', 'The rollie does not go out. It would not dare.'),
