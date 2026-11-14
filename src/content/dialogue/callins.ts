@@ -40,7 +40,7 @@ export const CALLINS: DialogueFile = {
       'Myko did most of a welding course in Carrick.',
       'It takes Myko three seconds. Batman would still be up on the roof, waiting for the right moment.',
     ),
-    blackout('myko.call.puzzle.blackout.2', 'Myko reads the instructions.', 'There are no instructions. He reads them anyway.', 'It is done before he gets to the end.'),
+    blackout('myko.call.puzzle.blackout.2', 'Myko asks what the problem is.', 'Andrew explains. It takes him a while.', 'By the end of the explanation there is no problem.'),
 
     // Third and last call.
     blackout('myko.call.fight.blackout.3', 'Two seconds.', 'He is getting quicker. Nobody knows what he practises on.', 'The rollie does not go out. It would not dare.'),
