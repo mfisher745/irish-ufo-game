@@ -277,7 +277,7 @@ describe('GameSession flow', () => {
     expect(store.load()?.mykoCallsLeft).toBe(2);
     expect(store.load()?.respawn.position).toEqual(stood);
     run.tick(16, NO_INPUT);
-    run.dialogueFinished('c1.call.fight.blackout');
+    run.dialogueFinished('myko.call.fight.blackout.1');
     run.dialogue.finishAll();
     expect(run.isComplete('c1.fight.chipper')).toBe(true);
     run.player.takeHit({ source: { kind: 'hazard', hazardId: 'x' }, targetInstanceId: 'andrew', amount: 1000, knockback: { x: 0, y: 0 }, stunMs: 0, holdMs: 0 });
