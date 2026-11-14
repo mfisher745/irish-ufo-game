@@ -73,12 +73,13 @@ describe('evaluateCall (pure rules)', () => {
 function fakeHost(opts: { calls?: number; target?: () => CallTarget | null; stealth?: boolean } = {}) {
   const log: string[] = [];
   const bus = new EventBus();
-  const state = { calls: opts.calls ?? 3, saved: 0, played: [] as DialogueId[], protectedOn: false };
+  const state = { calls: opts.calls ?? 3, saved: 0, played: [] as DialogueId[], protectedOn: false, repeat: new Map<DialogueId, boolean>() };
   const host: MykoHost = {
     bus,
     rng: seededRandom(2),
-    play: (id) => {
+    play: (id, repeat) => {
       state.played.push(id);
+      state.repeat.set(id, repeat === true);
       log.push(`play:${id}`);
     },
     pool: (id) => [`${id}.01`, `${id}.02`],
@@ -272,6 +273,24 @@ describe('Myko call-in (fake host)', () => {
     f.myko.hint();
     expect(f.state.played).toEqual(['nudge', 'answer', 'answer']);
     expect(hints.map((h) => h.level)).toEqual([1, 2, 2]);
+  });
+
+  it('nothing is said twice: hints, pool comments and refusals are repeatable; the post-call scene is not', () => {
+    const f = fakeHost();
+    f.myko.hint();
+    f.myko.comment('clue', 'pool', true);
+    expect(f.state.repeat.get('nudge')).toBe(true);
+    expect(f.state.repeat.get('pool.01') ?? f.state.repeat.get('pool.02')).toBe(true);
+    const refused = fakeHost({ calls: 0, target: () => ({ completable: fakeCompletable('c1.puzzle.kegs', 'puzzle'), entrance: null }) });
+    refused.myko.tryCall();
+    expect(refused.state.repeat.get(refused.state.played[0] ?? '')).toBe(true);
+    const admin = fakeHost({ target: () => ({ completable: fakeCompletable('c10.boss.administrator', 'boss'), entrance: null }) });
+    admin.myko.tryCall();
+    expect(admin.state.repeat.get('myko.callRefused.administrator.callsLeft')).toBe(true);
+    const call = fakeHost({ target: () => ({ completable: fakeCompletable('c1.puzzle.kegs', 'puzzle'), entrance: null }) });
+    call.myko.tryCall();
+    call.myko.blackoutFinished('c1.call.puzzle.blackout');
+    expect(call.state.repeat.get('c1.call.puzzle')).toBe(false);
   });
 
   it('comment respects the cooldown unless forced and avoids repeating the last line', () => {
