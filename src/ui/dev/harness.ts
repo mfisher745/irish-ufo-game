@@ -5,8 +5,7 @@
 
 import Phaser from 'phaser';
 import { createAudio, EFFECT_IDS } from '../../audio';
-import { compileTheme, scheduleStep } from '../../audio/music';
-import { THEMES } from '../../audio/themes';
+import { scheduleSection, sectionsFor } from '../../audio/music';
 import { makeNoiseBuffer, renderEffect } from '../../audio/synth';
 import type { EffectId } from '../../audio';
 import { PALETTE } from '../../art/palette';
@@ -42,22 +41,31 @@ const game = new Phaser.Game({
   scene: [WorldScene, ...createUiScenes(source, { play: (e: EffectId) => audio.play(e) })],
 });
 
-/** Renders an effect or a theme offline and returns the peak sample, to prove it is not silent. */
+/** Renders an effect offline and returns the peak sample, to prove it is not silent. */
 async function peakOf(kind: 'effect' | 'theme', name: string): Promise<number> {
-  const seconds = kind === 'effect' ? 1.2 : 8;
-  const ctx = new OfflineAudioContext(1, 44100 * seconds, 44100);
+  if (kind === 'theme') return (await renderThemeSections(name as RegionId, 0))[0]?.peak ?? 0;
+  const ctx = new OfflineAudioContext(1, 44100 * 1.2, 44100);
   const noise = makeNoiseBuffer(ctx);
-  if (kind === 'effect') {
-    renderEffect(name as EffectId, { ctx, dest: ctx.destination, noise }, 0.01);
-  } else {
-    const theme = compileTheme(THEMES[name as RegionId]);
-    const buses = { bass: ctx.destination, rest: ctx.destination };
-    for (let s = 0; s * theme.stepSec < seconds; s++) scheduleStep(ctx, buses, noise, theme, s, s * theme.stepSec);
-  }
+  renderEffect(name as EffectId, { ctx, dest: ctx.destination, noise }, 0.01);
   const out = await ctx.startRendering();
   let peak = 0;
   for (const v of out.getChannelData(0)) peak = Math.max(peak, Math.abs(v));
   return peak;
+}
+
+/** Renders every section of a region's theme at a boss level (0 = normal) offline: peak and duration of each. */
+async function renderThemeSections(region: RegionId, level: number): Promise<Array<{ id: string; kind: string; seconds: number; peak: number }>> {
+  const out: Array<{ id: string; kind: string; seconds: number; peak: number }> = [];
+  for (const section of sectionsFor(region, level)) {
+    const ctx = new OfflineAudioContext(1, Math.ceil(44100 * (section.durationSec + 2)), 44100);
+    const noise = makeNoiseBuffer(ctx);
+    scheduleSection(ctx, ctx.destination, noise, section, 0.05);
+    const buf = await ctx.startRendering();
+    let peak = 0;
+    for (const v of buf.getChannelData(0)) peak = Math.max(peak, Math.abs(v));
+    out.push({ id: section.id, kind: section.kind, seconds: Math.round(section.durationSec * 10) / 10, peak: Math.round(peak * 1000) / 1000 });
+  }
+  return out;
 }
 
 const ev = (id: string): EvidenceId => id as EvidenceId;
@@ -68,6 +76,7 @@ const dev = {
   audio,
   keys: UiSceneKeys,
   peakOf,
+  renderThemeSections,
   effectIds: EFFECT_IDS,
   errors: [] as string[],
   start(key: string): void {
