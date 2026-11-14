@@ -40,6 +40,8 @@ export interface Look {
   readonly shoes: ColourName;
   readonly eyes?: Eyes;
   readonly stubble?: boolean;
+  /** A full beard in the hair colour: jaw, chin and sideburns. */
+  readonly beard?: boolean;
   /** Myko's permanent half-smile. */
   readonly halfSmile?: boolean;
   /** A rolled cigarette at the corner of the mouth. */
@@ -315,6 +317,16 @@ function drawStanding(b: PixelBuffer, look: Look, facing: 'down' | 'up' | 'right
       for (let i = side ? 2 : 1; i < hw - 1; i++) {
         if ((i + hy) % 2 === 0) b.set(hx + i, hy + hh - 2, look.skinShade);
         b.set(hx + i, hy + hh - 1, look.skinShade);
+      }
+    }
+    if (look.beard === true) {
+      const beard = look.hair ?? 'turfDark';
+      // Sideburns beside the eyes' lower row, then the jaw and chin filled in.
+      b.set(hx + (side ? 1 : 0), hy + hh - 3, beard);
+      if (!side) b.set(hx + hw - 1, hy + hh - 3, beard);
+      for (let i = side ? 1 : 0; i < hw; i++) {
+        b.set(hx + i, hy + hh - 2, beard);
+        b.set(hx + i, hy + hh - 1, beard);
       }
     }
     if (look.halfSmile === true) {

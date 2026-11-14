@@ -61,8 +61,9 @@ Voice samples. These set the register; they are not required lines.
 
 ### Andrew (player character)
 
-- 38, from Kilnamoe, County Leitrim (a fictional town). On the dole. Three-time winner of the Feeney's table quiz, which he mentions.
-- Short and slight. He is about half a head shorter than Myko and he is not pudgy. He wears a worn green-grey anorak, jeans and runners, and has stubble and tired eyes.
+- 38, from Kilnamoe, County Leitrim (a fictional town). On the dole since he lost his licence. Three-time winner of the Feeney's table quiz, which he mentions.
+- He was a doctor, the GP in Kilnamoe, until he was struck off the register. The reason is never stated: not by him, not by Myko, not by the narrator, and not in a joke that gives it away. Nobody asks. People at home still call him Doctor out of habit and still tell him their symptoms, and he says he can't look at it. When he is hit he knows exactly what has been broken.
+- Short and slight. He is about half a head shorter than Myko and he is not pudgy. He wears a worn green-grey anorak, jeans and runners, and has a full dark beard and tired eyes.
 - He has a chip on his shoulder. He wants to prove himself to the world, and it does not matter how. Aliens are what turned up. If it had been a record-breaking turnip he would have gone after that with the same face.
 - He believes in aliens with complete, calm certainty. He is polite, stubborn and hopeless with money, and he is braver than he should be once he has had a few.
 - He never says any of this out loud. It shows in what he mentions (the table quiz), in who he brings up without being asked (people from school who "did well"), and in how much he hates asking Myko for help.
@@ -255,7 +256,7 @@ Progress saves automatically to the browser's local storage at each checkpoint, 
 
 - The aliens are small, grey and neatly dressed. They look like people who work in an office, because they do.
 - Andrew's sprite is short and slight, not round. Myko's is tall and thin, bare-headed, with brown hair.
-- HUD: every slot shows its icon and the key or mouse button that uses it. Health top left. Along the bottom: the three drink slots (1, 2, 3, with Q on the selected one), empties with the right mouse button, the melee attack with the left mouse button, the dodge with Space once learned, the special with F, the Buzz meter and its state name in the centre, and Myko calls left (three small rollie icons, M). Things Andrew can pick up or examine are drawn as themselves with a small glint, never as abstract markers. Dialogue box with a 32 × 32 portrait.
+- HUD: every slot shows its icon and the key or mouse button that uses it. Health top left. Along the bottom: the three drink slots (1, 2, 3, with Q on the selected one), empties with the right mouse button, the melee attack with the left mouse button, the dodge with Space once learned, the special with F, the Buzz meter and its state name in the centre, and Myko calls left (three small cannabis-leaf icons, M). Things Andrew can pick up or examine are drawn as themselves with a small glint, never as abstract markers. Dialogue box with a 32 × 32 portrait.
 - A pixel bitmap font, generated in code.
 
 ## 9. Audio

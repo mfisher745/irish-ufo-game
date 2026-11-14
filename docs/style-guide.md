@@ -15,7 +15,7 @@ Owner: `creative-director`. This document says how the game looks, reads and sou
 
 | Sprite | Size | Notes |
 |---|---|---|
-| Andrew | 16 × 28 | Head 8 px tall, body narrow: 8 px at the shoulders, no belly curve. `anorak` jacket, `denim` legs, `bone` runners. Two-pixel stubble row in `skinShade`. Eyes are a single `ink` pixel each with a `skinShade` pixel under them (tired). |
+| Andrew | 16 × 28 | Head 8 px tall, body narrow: 8 px at the shoulders, no belly curve. `anorak` jacket, `denim` legs, `bone` runners. Full beard in the hair colour (`turfDark`): the bottom two rows of the head and a sideburn pixel each side. Eyes are a single `ink` pixel each with a `skinShade` pixel under them (tired). |
 | Myko | 16 × 32 | Head top is 4 px above Andrew's when they stand on the same row. 6 px at the shoulders. `mykoCoat` to the knee, no hat, untidy `turf` hair, one `white` pixel of rollie with an `amber` tip that blinks every 2 seconds. Mouth is a 3-pixel line raised one pixel at one end (the half-smile). It never changes until the epilogue. |
 | Humans | 16 × 24 to 16 × 28 | One distinguishing item each: Dympna's tea towel, Halloran's hi-vis over a suit, Pruitt's lanyard and thermos. |
 | Aliens | 16 × 20 | `alienGrey` skin, large `ink` eyes, shirt and tie. Shorter than Andrew, which he notices. |
@@ -40,10 +40,10 @@ Every enemy attack has a telegraph frame held for at least 400 ms. If the player
 
 ## 4. HUD and text boxes
 
-- HUD sits in the bottom 16 px and the top-left corner. Top left: health as pint-glass pips, the Buzz meter under it (64 × 6 px, with three notches at 20, 60 and 90). Bottom left: selected drink and empties count. Bottom right: current special ability and three rollie icons for Myko calls. A spent call is an `ink` stub.
+- HUD sits in the bottom 16 px and the top-left corner. Top left: health as pint-glass pips, the Buzz meter under it (64 × 6 px, with three notches at 20, 60 and 90). Bottom left: selected drink and empties count. Bottom right: current special ability and three cannabis-leaf icons for Myko calls (`grass` with a `moss` stem). A spent call is the same leaf in `slate`.
 - The commentary box is 480 × 40 at the bottom, above the HUD strip, and never pauses play. It holds a 32 × 32 portrait at the left and up to 3 lines of text.
 - The scripted-scene dialogue box has the same layout, pauses play and advances with E or left click.
-- Holding M draws a ring that fills clockwise around Myko's rollie icons over 1 second. Releasing early cancels with no cost.
+- Holding M draws a ring that fills clockwise around Myko's leaf icons over 1 second. Releasing early cancels with no cost.
 
 ## 5. Font
 

@@ -25,6 +25,8 @@ interface Face {
   readonly tired?: boolean;
   readonly shades?: boolean;
   readonly stubble?: boolean;
+  /** A full beard in the hair colour; the mouth line stays. */
+  readonly beard?: boolean;
   readonly halfSmile?: boolean;
   readonly frown?: boolean;
   readonly rollie?: boolean;
@@ -114,6 +116,18 @@ function drawFace(b: PixelBuffer, f: Face): void {
       for (let i = x + 2; i < x + w - 2; i++) if ((i + j) % 2 === 0 && b.get(i, j) === f.skin) b.set(i, j, f.skinShade);
     }
   }
+  if (f.beard === true) {
+    const beard = f.hair ?? 'coal';
+    for (let j = my - 4; j < top + h; j++) {
+      for (let i = x; i < x + w; i++) {
+        const c = b.get(i, j);
+        if (c !== f.skin && c !== f.skinShade) continue;
+        // Cheeks: sideburns only (3 px each side). From the moustache row down: everything.
+        const cheek = j < my - 1;
+        if (!cheek || i < x + 3 || i >= x + w - 3) b.set(i, j, beard);
+      }
+    }
+  }
   if (f.rollie === true) b.hline(19, my, 5, 'white').set(24, my, 'amber').set(25, my - 2, 'fog').set(26, my - 4, 'fog');
 
   // Frame.
@@ -121,7 +135,7 @@ function drawFace(b: PixelBuffer, f: Face): void {
 }
 
 const FACES: Readonly<Record<SpeakerId, Face>> = {
-  andrew: { background: 'mossDark', skin: 'skin', skinShade: 'skinShade', top: 'anorak', topShade: 'mossDark', hair: 'turfDark', tired: true, stubble: true, collar: 'slate' },
+  andrew: { background: 'mossDark', skin: 'skin', skinShade: 'skinShade', top: 'anorak', topShade: 'mossDark', hair: 'turfDark', tired: true, beard: true, collar: 'slate' },
   myko: { background: 'coal', skin: 'skinLight', skinShade: 'skin', top: 'mykoCoat', topShade: 'ink', hair: 'turf', hairRows: 5, halfSmile: true, rollie: true, width: 13 },
   dympna: { background: 'turfDark', skin: 'skinLight', skinShade: 'skin', top: 'brick', topShade: 'brickDark', hair: 'fog', hairRows: 5, frown: true, collar: 'bone', width: 17 },
   halloran: { background: 'slate', skin: 'skin', skinShade: 'skinShade', top: 'amberLight', topShade: 'amber', hair: 'fog', hairRows: 3, tie: 'moss', collar: 'white' },
