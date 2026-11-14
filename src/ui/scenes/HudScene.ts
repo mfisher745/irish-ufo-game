@@ -15,7 +15,7 @@ import { TUNING } from '../../content/tuning';
 import { format, sequence, text } from '../../content/dialogue';
 import { isAlienLine } from '../../content/dialogue/speakers';
 import { GameEvents } from '../../core/types';
-import type { DialogueLine, SpeakerId, TextId } from '../../core/types';
+import type { DialogueId, DialogueLine, SpeakerId, TextId } from '../../core/types';
 import type { EffectId } from '../../audio';
 import { bindFullscreenHotkey } from '../fullscreen';
 import type { Label, Pic } from '../gfx';
@@ -152,6 +152,9 @@ export class HudScene extends Phaser.Scene {
   private lineLabels: Label[] = [];
   private advanceLabel!: Label;
   private captionBg!: Phaser.GameObjects.Rectangle;
+  /** Full-screen black while Myko's call-in blackout caption plays. */
+  private blackout!: Phaser.GameObjects.Rectangle;
+  private blackoutId: DialogueId | null = null;
   private captionLabels: Label[] = [];
 
   // Notices
@@ -187,7 +190,13 @@ export class HudScene extends Phaser.Scene {
     this.queue = new DialogueQueue({
       lookup: (id) => sequence(id),
       speakerName: (line) => this.speakerName(line),
-      onFinished: (id) => source.dialogueFinished(id),
+      onFinished: (id) => {
+        if (id === this.blackoutId) {
+          this.blackoutId = null;
+          this.blackout.setVisible(false);
+        }
+        source.dialogueFinished(id);
+      },
       onChar: (line) => this.shared.hooks.play?.(blipFor(line)),
       onError: (id, error) => console.error(`Dialogue ${id} failed`, error),
     });
@@ -291,6 +300,8 @@ export class HudScene extends Phaser.Scene {
       this.lineLabels.push(makeLabel(this, DIALOGUE_TEXT.x, DIALOGUE_TEXT.y + (i + 1) * DIALOGUE_TEXT.rowHeight, '', 'white', { depth: D.box + 1 }));
     }
     this.advanceLabel = makeLabel(this, SCREEN.width - 4, DIALOGUE_BOX.y + 2, text('ui.prompt.advance'), 'steel', { anchor: 'right', depth: D.box + 1 });
+    this.blackoutId = null;
+    this.blackout = rect(this, 0, 0, SCREEN.width, SCREEN.height, 'ink', D.caption - 0.5).setVisible(false);
     this.captionBg = rect(this, 0, 96, SCREEN.width, 78, 'ink', D.caption);
     for (let i = 0; i < DIALOGUE_TEXT.maxLines; i++) {
       this.captionLabels.push(makeLabel(this, SCREEN.width / 2, 110 + i * 18, '', 'bone', { anchor: 'centre', depth: D.caption + 1 }));
@@ -320,6 +331,11 @@ export class HudScene extends Phaser.Scene {
     const { bus } = this.shared.source;
     this.unsubs.push(
       bus.on(GameEvents.DialogueShow, ({ sequenceId }) => this.queue.enqueue(sequenceId)),
+      bus.on(GameEvents.MykoBlackout, ({ sequenceId }) => {
+        this.blackoutId = sequenceId;
+        this.blackout.setVisible(true);
+        this.queue.enqueue(sequenceId);
+      }),
       bus.on(GameEvents.SaveWritten, () => this.flash(this.saved, NOTICE_MS.saved)),
       bus.on(GameEvents.AbilityUnlocked, ({ abilityId }) => {
         this.setNotice(this.ability, format('ability.unlocked', { name: text(`ability.${abilityId}.name`) }), NOTICE_MS.ability);

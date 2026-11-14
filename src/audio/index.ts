@@ -213,6 +213,7 @@ export function createAudio(bus: GameEventBus, getSettings: () => AudioSettings,
       lastHeat = active ? value : 0;
     }),
     bus.on(G.SaveWritten, () => play('save')),
+    bus.on(G.PropBroken, ({ frame }) => play(/bottle|flowerPot/i.test(frame) ? 'breakGlass' : /barrel|sack|cardboard/i.test(frame) ? 'smallCrash' : 'breakWood')),
     bus.on(G.MykoCallStarted, ({ sectionId }) => {
       callSection = sectionId;
       music.setSilent(true);
