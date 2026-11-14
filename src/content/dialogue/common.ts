@@ -258,7 +258,7 @@ export const COMMON: DialogueFile = {
       ['myko', "I'll hang on to the others for you. You won't need them."],
     ),
     box('myko.cleanRun', ['myko', 'Nobody saw you. I barely saw you, and I was looking.']),
-    // A second or third call in the one chapter: the same scene in every chapter, and it may repeat.
+    // A second call in the one chapter: the same scene in every chapter.
     scene(
       'myko.call.again',
       ['myko', 'Again.'],
@@ -268,6 +268,18 @@ export const COMMON: DialogueFile = {
       ['andrew', 'I had it mostly done.'],
       ['myko', "You'd it mostly started. Will I just stay standing beside you? Save you holding the button."],
       ['myko', "Three-time winner of the Feeney's table quiz. I'd love to have seen the other tables."],
+    ),
+    // The third call when all three went in the one chapter. The hardest he is on Andrew. Hard, not cruel.
+    scene(
+      'myko.call.allThree',
+      ['myko', 'That was the three.'],
+      ['andrew', 'I know.'],
+      ['myko', "All three, Andrew. In the one place. There's a long road ahead of us, by your own account, and you've nothing left for it now but yourself."],
+      ['myko', "I've watched you lose to a fruit machine, a stile and a seagull. I thought I'd seen the full range. I had not."],
+      ['andrew', 'They were hard ones.'],
+      ['myko', "They were not. I've had more trouble opening crisps."],
+      ['myko', "So I'm back to advising, and here's the advice. Whatever's next, you're all that's coming. I'd pity it, only it'll be grand. It's you I'd pity."],
+      ['myko', "Go on. I'll be right behind you. A good bit behind you."],
     ),
     box('myko.caught', ['myko', "They've seen you. Go on, so. Plan B was always the plan."]),
   ],
