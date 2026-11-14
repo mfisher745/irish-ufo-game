@@ -117,7 +117,7 @@ export interface LivePickup {
 }
 
 /** Effects the run triggers directly, because they have no bus event. */
-export type RunEffect = 'door' | 'push' | 'deflect';
+export type RunEffect = 'door' | 'push' | 'deflect' | 'thud';
 
 export interface RunOptions {
   readonly module: ChapterModule;
@@ -1167,16 +1167,17 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
   }
 
   /** One hit on a breakable; on breaking: debris, loot, noise, `prop:broken`, and the save remembers it. */
-  private hitBreakable(prop: LiveProp): void {
+  private hitBreakable(prop: LiveProp): ReturnType<Dressing['hitProp']> {
     const frame = prop.frame;
     const res = this.dressing.hitProp(prop.key, TUNING.breakables.hitFlashMs);
-    if (res !== 'broken') return;
+    if (res !== 'broken') return res;
     const centre = this.propCentre(prop);
     this.dropLoot(prop, centre);
     this.emitNoise({ kind: 'breakable', position: centre, radius: TUNING.breakables.noiseRadius });
     this.bus.emit(GameEvents.PropBroken, { screenId: prop.screenId, propId: prop.key, frame });
     const key = prop.key;
     this.opts.patchSave?.((s) => ((s.brokenProps ?? []).includes(key) ? s : { ...s, brokenProps: [...(s.brokenProps ?? []), key] }));
+    return res;
   }
 
   private propCentre(prop: LiveProp): Vec2 {
@@ -1307,12 +1308,17 @@ export class ChapterRun implements ChapterContext, SectionHost, CombatWorld {
       comboLength: a.comboLength,
       haymaker: a.comboLength > 1 && a.comboIndex === a.comboLength - 1,
     };
+    let thud = false;
     for (const h of [...this.meleeHooks]) {
-      if (h.screenId === this.screen.id && shapeHitsRect(a.shape, p.pos, p.aimDeg, h.area)) h.callback(info);
+      if (h.screenId === this.screen.id && shapeHitsRect(a.shape, p.pos, p.aimDeg, h.area)) {
+        thud = true;
+        h.callback(info);
+      }
     }
     for (const prop of this.dressing.breakablesOn(this.screen.id)) {
-      if (shapeHitsRect(a.shape, p.pos, p.aimDeg, propHitRect(prop))) this.hitBreakable(prop);
+      if (shapeHitsRect(a.shape, p.pos, p.aimDeg, propHitRect(prop)) && this.hitBreakable(prop) !== 'broken') thud = true;
     }
+    if (thud) this.opts.playEffect?.('thud');
   }
 
   private alarmGuardsHit(shape: AttackShape, angle: number): void {
